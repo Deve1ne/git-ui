@@ -72,6 +72,14 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // The version in the title bar shows which build is running, e.g. after an upgrade.
+        var version = typeof(MainWindow).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .FirstOrDefault()?.InformationalVersion.Split('+')[0];
+        if (!string.IsNullOrEmpty(version))
+            Title = "Git UI " + version;
+
         // Zoom (Ctrl+= / Ctrl+- / Ctrl+0) scales the whole window content, like GitKraken's zoom.
         var content = (Control)Content!;
         Content = null;

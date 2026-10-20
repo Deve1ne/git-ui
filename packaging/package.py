@@ -100,15 +100,34 @@ def is_executable(rel_path):
 
 # ---------------------------------------------------------------- Windows MSI
 
+WIX_EXTENSIONS = ('WixToolset.UI.wixext/5.0.2', 'WixToolset.Util.wixext/5.0.2')
+
+
+def license_rtf():
+    """LICENSE as the RTF the installer's license page shows."""
+    with open(os.path.join(ROOT, 'LICENSE'), encoding='utf-8') as f:
+        text = f.read().replace('\\', '\\\\').replace('{', '\\{').replace('}', '\\}')
+    paragraphs = [' '.join(p.split()) for p in re.split(r'\n\s*\n', text.strip())]
+    body = '\\par\\par\n'.join(paragraphs)
+    path = os.path.join(DIST, 'License.rtf')
+    with open(path, 'w', encoding='ascii', errors='replace', newline='\n') as f:
+        f.write('{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Segoe UI;}}\\f0\\fs18\n' + body + '\\par\n}\n')
+    return path
+
+
 def build_win(ver):
     out = publish(TARGETS['win'])
     msi = os.path.join(DIST, 'GitUi-%s-win-x64.msi' % ver)
     run('dotnet', 'tool', 'restore')
+    for ext in WIX_EXTENSIONS:
+        run('dotnet', 'wix', 'extension', 'add', '-g', ext)
     run('dotnet', 'wix', 'build', os.path.join(PACKAGING, 'windows', 'GitUi.wxs'),
         '-arch', 'x64',
+        '-ext', 'WixToolset.UI.wixext', '-ext', 'WixToolset.Util.wixext',
         '-d', 'Version=' + ver,
         '-d', 'PublishDir=' + out,
         '-d', 'IconFile=' + os.path.join(ASSETS, 'gitui.ico'),
+        '-d', 'LicenseRtf=' + license_rtf(),
         '-o', msi)
     return msi
 
