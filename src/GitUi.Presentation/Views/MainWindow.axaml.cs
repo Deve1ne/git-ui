@@ -574,11 +574,7 @@ public partial class MainWindow : Window
         graphCanvas.RefsOverflowClicked += async (_, row) =>
         {
             var menu = new ContextMenu();
-            var ordered = row.Labels
-                .OrderByDescending(l => l.IsHead)
-                .ThenBy(l => l.Kind)
-                .ThenBy(l => l.Name, StringComparer.OrdinalIgnoreCase);
-            foreach (var label in ordered)
+            foreach (var label in CommitGraphDrawOperation.OrderedLabels(row.Labels))
             {
                 var kind = label.Kind switch
                 {
@@ -631,7 +627,9 @@ public partial class MainWindow : Window
         RefDrag.AttachSource(graphCanvas, e =>
         {
             var point = e.GetPosition(graphCanvas);
-            return graphCanvas.IsInRefsColumn(point) && graphCanvas.RowAt(point) is { Labels.Count: > 0 } row ? TargetForRow(row) : null;
+            return graphCanvas.IsInRefsColumn(point) && !graphCanvas.IsOverExpandedRefs(point) && graphCanvas.RowAt(point) is { Labels.Count: > 0 } row
+                ? TargetForRow(row)
+                : null;
         });
 
         RefDrag.AttachTarget(

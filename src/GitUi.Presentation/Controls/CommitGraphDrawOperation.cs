@@ -45,6 +45,7 @@ internal sealed class CommitGraphDrawOperation : ICustomDrawOperation
     private readonly bool _isWipSelected;
     private readonly IReadOnlySet<string>? _searchMatches;
     private readonly CommitGraphRow? _compareRow;
+    private readonly int _expandedRefsRow;
 
     private static readonly SKColor SearchMatchColor = SKColor.Parse("#26ECB91C");
 
@@ -60,8 +61,10 @@ internal sealed class CommitGraphDrawOperation : ICustomDrawOperation
         int wipChangeCount,
         bool isWipSelected,
         IReadOnlySet<string>? searchMatches = null,
-        CommitGraphRow? compareRow = null)
+        CommitGraphRow? compareRow = null,
+        int expandedRefsRow = -1)
     {
+        _expandedRefsRow = expandedRefsRow;
         _searchMatches = searchMatches;
         _compareRow = compareRow;
         Bounds = bounds;
@@ -126,6 +129,13 @@ internal sealed class CommitGraphDrawOperation : ICustomDrawOperation
         if (_wipChangeCount > 0 && clip.Top < CommitGraphMetrics.RowHeight)
         {
             DrawWipRow(canvas, graph, width);
+        }
+
+        // Last, so the unfolded refs sit on top of the rows below.
+        if (_expandedRefsRow >= 0 && _expandedRefsRow < _rows.Count && _rows[_expandedRefsRow].Labels.Count > 1
+            && _columns.Any(c => c.Column == CommitGraphColumn.Refs))
+        {
+            DrawExpandedRefs(canvas, Column(CommitGraphColumn.Refs), _expandedRefsRow);
         }
     }
 
@@ -388,13 +398,7 @@ internal sealed class CommitGraphDrawOperation : ICustomDrawOperation
 
             if (layout.Badge is { } rect)
             {
-                var labelFont = first.IsHead ? headFont : font;
-                var color = first.Kind == RefLabelKind.Tag ? TagColor : laneColor;
-                fillPaint.Color = color.WithAlpha(first.Kind == RefLabelKind.RemoteBranch ? (byte)0x30 : (byte)0x55);
-                borderPaint.Color = color;
-                canvas.DrawRoundRect(rect, 3, 3, fillPaint);
-                canvas.DrawRoundRect(rect, 3, 3, borderPaint);
-                canvas.DrawText(layout.BadgeText, rect.Left + 4f, centerY + 4f, SKTextAlign.Left, labelFont, textPaint);
+                DrawBadge(canvas, rect, first, layout.BadgeText, laneColor, first.IsHead ? headFont : font, textPaint, fillPaint, borderPaint);
                 left = rect.Right + 4f;
             }
 
@@ -411,6 +415,96 @@ internal sealed class CommitGraphDrawOperation : ICustomDrawOperation
             linkPaint.Color = laneColor.WithAlpha(0x99);
             canvas.DrawLine(left, centerY, Math.Min(LaneX(graph, row.Node.Lane), graph.Right), centerY, linkPaint);
         }
+    }
+
+    private void DrawBadge(SKCanvas canvas, SKRect rect, RefLabel label, string text, SKColor laneColor, SKFont labelFont, SKPaint textPaint, SKPaint fillPaint, SKPaint borderPaint)
+    {
+        var color = label.Kind == RefLabelKind.Tag ? TagColor : laneColor;
+        fillPaint.Color = color.WithAlpha(label.Kind == RefLabelKind.RemoteBranch ? (byte)0x30 : (byte)0x55);
+        borderPaint.Color = color;
+        canvas.DrawRoundRect(rect, 3, 3, fillPaint);
+        canvas.DrawRoundRect(rect, 3, 3, borderPaint);
+        canvas.DrawText(text, rect.Left + 4f, rect.MidY + 4f, SKTextAlign.Left, labelFont, textPaint);
+    }
+
+    /// <summary>
+    /// The hovered "+N" unfolded: every ref of the row stacked as badges over the rows below, the
+    /// first one exactly where the collapsed badge was.
+    /// </summary>
+    private void DrawExpandedRefs(SKCanvas canvas, CommitGraphColumnBounds refs, int index)
+    {
+        var row = _rows[index];
+        using var font = new SKFont(RegularTypeface, 11);
+        using var headFont = new SKFont(BoldTypeface, 11);
+        var panel = ExpandedRefsPanel(row.Labels, refs.Left, refs.Right, RowCenter(index), font, headFont);
+
+        using var shadowPaint = new SKPaint { IsAntialias = true, Color = SKColors.Black.WithAlpha(0x50), MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 4) };
+        using var panelPaint = new SKPaint { IsAntialias = true, Color = _isDarkTheme ? SKColor.Parse("#24272E") : SKColor.Parse("#FFFFFF") };
+        using var panelBorder = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1f, Color = _isDarkTheme ? SKColor.Parse("#40FFFFFF") : SKColor.Parse("#30000000") };
+        using var textPaint = new SKPaint { IsAntialias = true, Color = _isDarkTheme ? SKColors.White : SKColors.Black };
+        using var fillPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var borderPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1f };
+
+        var shadow = panel;
+        shadow.Offset(0, 2);
+        canvas.DrawRoundRect(shadow, 5, 5, shadowPaint);
+        canvas.DrawRoundRect(panel, 5, 5, panelPaint);
+        canvas.DrawRoundRect(panel, 5, 5, panelBorder);
+
+        var laneColor = LaneColor(row.Node.Lane);
+        var centerY = RowCenter(index);
+        foreach (var label in OrderedLabels(row.Labels))
+        {
+            var labelFont = label.IsHead ? headFont : font;
+            var text = Ellipsize(label.Name, labelFont, ExpandedMaxTextWidth);
+            var rect = new SKRect(refs.Left + 4f, centerY - 8f, refs.Left + 4f + labelFont.MeasureText(text) + 8f, centerY + 8f);
+            DrawBadge(canvas, rect, label, text, laneColor, labelFont, textPaint, fillPaint, borderPaint);
+            centerY += ExpandedStep;
+        }
+
+        // The "+N" stays visible on the panel's first line, where the pointer is.
+        if (LayoutRefs(row.Labels, refs.Left, refs.Right, RowCenter(index), font, headFont) is { Overflow: { } overflow, OverflowText: { } overflowText }
+            && overflow.Left >= refs.Left + 4f + headFont.MeasureText(OrderedLabels(row.Labels).First().Name) + 8f)
+        {
+            fillPaint.Color = laneColor.WithAlpha(0x26);
+            canvas.DrawRoundRect(overflow, 3, 3, fillPaint);
+            canvas.DrawText(overflowText, overflow.Left + 4f, overflow.MidY + 4f, SKTextAlign.Left, font, textPaint);
+        }
+    }
+
+    private const float ExpandedStep = 22f;
+    private const float ExpandedMaxTextWidth = 360f;
+
+    /// <summary>The order refs are listed in when a "+N" unfolds: checked out, local, remote, tags, then by name.</summary>
+    internal static IEnumerable<RefLabel> OrderedLabels(IReadOnlyList<RefLabel> labels) => labels
+        .OrderByDescending(l => l.IsHead)
+        .ThenBy(l => l.Kind)
+        .ThenBy(l => l.Name, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The panel of an unfolded "+N", for the row whose center is <paramref name="centerY"/>.</summary>
+    internal static SKRect ExpandedRefsPanel(IReadOnlyList<RefLabel> labels, float columnLeft, float columnRight, float centerY, SKFont font, SKFont headFont)
+    {
+        var widest = labels.Max(l =>
+        {
+            var labelFont = l.IsHead ? headFont : font;
+            return labelFont.MeasureText(Ellipsize(l.Name, labelFont, ExpandedMaxTextWidth)) + 8f;
+        });
+        // Wide enough to take in the "+N" too, so the pointer can move from it to the panel.
+        var right = columnLeft + 4f + widest + 6f;
+        if (LayoutRefs(labels, columnLeft, columnRight, centerY, font, headFont).Overflow is { } overflow)
+        {
+            right = Math.Max(right, overflow.Right + 4f);
+        }
+
+        return new SKRect(columnLeft, centerY - 13f, right, centerY + 13f + (labels.Count - 1) * ExpandedStep);
+    }
+
+    /// <summary><see cref="ExpandedRefsPanel(IReadOnlyList{RefLabel}, float, float, float, SKFont, SKFont)"/> with the graph's fonts, for hit testing.</summary>
+    internal static SKRect ExpandedRefsPanel(IReadOnlyList<RefLabel> labels, float columnLeft, float columnRight, float centerY)
+    {
+        using var font = new SKFont(RegularTypeface, 11);
+        using var headFont = new SKFont(BoldTypeface, 11);
+        return ExpandedRefsPanel(labels, columnLeft, columnRight, centerY, font, headFont);
     }
 
     private void DrawTextColumns(SKCanvas canvas, int firstVisible, int lastVisible)

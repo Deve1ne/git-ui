@@ -87,6 +87,11 @@ public sealed class CommitGraphCanvas : Control
             _compareRow = null;
         }
 
+        if (change.Property == RowsProperty || change.Property == WipChangeCountProperty)
+        {
+            _expandedRefsRow = -1;
+        }
+
         if (change.Property == SelectedRowProperty && change.NewValue is CommitGraphRow row && Rows is { } rows)
         {
             var index = -1;
@@ -121,7 +126,17 @@ public sealed class CommitGraphCanvas : Control
         base.OnPointerMoved(e);
 
         var position = e.GetPosition(this);
-        Cursor = IsOnRefsOverflow(position) ? HandCursor : null;
+
+        // Hovering "+N" unfolds every ref of the row; it stays open while the pointer is on the panel.
+        var expanded = IsOnRefsOverflow(position) ? RowIndexAt(position)
+            : IsOverExpandedRefs(position) ? _expandedRefsRow
+            : -1;
+        Cursor = expanded >= 0 ? HandCursor : null;
+        if (expanded != _expandedRefsRow)
+        {
+            _expandedRefsRow = expanded;
+            InvalidateVisual();
+        }
 
         var displayRow = (int)(position.Y / CommitGraphMetrics.RowHeight);
         if (displayRow >= DisplayRowCount)
@@ -140,11 +155,41 @@ public sealed class CommitGraphCanvas : Control
     {
         base.OnPointerExited(e);
 
-        if (_hoveredDisplayRow != -1)
+        if (_hoveredDisplayRow != -1 || _expandedRefsRow != -1)
         {
             _hoveredDisplayRow = -1;
+            _expandedRefsRow = -1;
             InvalidateVisual();
         }
+    }
+
+    // Index in Rows of the row whose "+N" is unfolded, or -1.
+    private int _expandedRefsRow = -1;
+
+    private int RowIndexAt(Point point)
+    {
+        var rowIndex = (int)(point.Y / CommitGraphMetrics.RowHeight) - RowOffset;
+        return Rows is not null && point.Y >= 0 && rowIndex >= 0 && rowIndex < Rows.Count ? rowIndex : -1;
+    }
+
+    /// <summary>True when <paramref name="point"/> is on the unfolded refs of a hovered "+N".</summary>
+    public bool IsOverExpandedRefs(Point point)
+    {
+        if (Rows is not { } rows || _expandedRefsRow < 0 || _expandedRefsRow >= rows.Count || rows[_expandedRefsRow].Labels.Count < 2)
+        {
+            return false;
+        }
+
+        var layout = (Columns ?? new CommitGraphColumns()).Layout((float)Bounds.Width);
+        if (!layout.Any(c => c.Column == CommitGraphColumn.Refs))
+        {
+            return false;
+        }
+
+        var refs = layout.First(c => c.Column == CommitGraphColumn.Refs);
+        var centerY = (_expandedRefsRow + RowOffset) * CommitGraphMetrics.RowHeight + CommitGraphMetrics.RowHeight / 2f;
+        return CommitGraphDrawOperation.ExpandedRefsPanel(rows[_expandedRefsRow].Labels, refs.Left, refs.Right, centerY)
+            .Contains((float)point.X, (float)point.Y);
     }
 
     private int RowOffset => WipChangeCount > 0 ? 1 : 0;
@@ -264,6 +309,18 @@ public sealed class CommitGraphCanvas : Control
         Focus();
 
         var position = e.GetPosition(this);
+        _pressedOnOverflow = null;
+
+        // A press on the unfolded refs belongs to their commit, not to the row drawn underneath.
+        if (IsOverExpandedRefs(position) && Rows is { } expandedRows)
+        {
+            _pressedOnOverflow = e.GetCurrentPoint(this).Properties.IsLeftButtonPressed ? position : null;
+            _compareRow = null;
+            _isWipSelected = false;
+            SelectedRow = expandedRows[_expandedRefsRow];
+            return;
+        }
+
         _pressedOnOverflow = e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && IsOnRefsOverflow(position) ? position : null;
 
         var displayRow = (int)(position.Y / CommitGraphMetrics.RowHeight);
@@ -300,10 +357,15 @@ public sealed class CommitGraphCanvas : Control
 
         // A click, not the start of a ref drag (which moves the pointer past a few pixels).
         var position = e.GetPosition(this);
-        if (_pressedOnOverflow is { } pressed && Math.Abs(position.X - pressed.X) < 4 && Math.Abs(position.Y - pressed.Y) < 4
-            && IsOnRefsOverflow(position) && RowAt(position) is { } row)
+        if (_pressedOnOverflow is { } pressed && Math.Abs(position.X - pressed.X) < 4 && Math.Abs(position.Y - pressed.Y) < 4)
         {
-            RefsOverflowClicked?.Invoke(this, row);
+            var row = IsOverExpandedRefs(position) && Rows is { } rows ? rows[_expandedRefsRow]
+                : IsOnRefsOverflow(position) ? RowAt(position)
+                : null;
+            if (row is not null)
+            {
+                RefsOverflowClicked?.Invoke(this, row);
+            }
         }
 
         _pressedOnOverflow = null;
@@ -321,6 +383,6 @@ public sealed class CommitGraphCanvas : Control
         var isDarkTheme = ActualThemeVariant == ThemeVariant.Dark;
         var columns = (Columns ?? new CommitGraphColumns()).Layout((float)Bounds.Width);
         context.Custom(new CommitGraphDrawOperation(
-            new Rect(Bounds.Size), Rows, columns, SelectedRow, _hoveredDisplayRow, isDarkTheme, WipChangeCount, _isWipSelected && WipChangeCount > 0, SearchMatches, _compareRow));
+            new Rect(Bounds.Size), Rows, columns, SelectedRow, _hoveredDisplayRow, isDarkTheme, WipChangeCount, _isWipSelected && WipChangeCount > 0, SearchMatches, _compareRow, _expandedRefsRow));
     }
 }
