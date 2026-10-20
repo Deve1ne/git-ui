@@ -12,6 +12,9 @@ Inspired by the best graphical Git clients, written in C# with Avalonia.
 ![Avalonia 12](https://img.shields.io/badge/Avalonia-12-8B44AC)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-2b2e36)
 ![Tests](https://img.shields.io/badge/tests-300%2B-2ea44f)
+[![Latest release](https://img.shields.io/github/v/release/Deve1ne/git-ui?label=download&color=0969da)](https://github.com/Deve1ne/git-ui/releases/latest)
+
+**[Download](https://github.com/Deve1ne/git-ui/releases/latest)** · [All releases](https://github.com/Deve1ne/git-ui/releases) · [Build from source](#run-from-source)
 
 <img src="docs/images/graph-dark.png" alt="Git UI showing a commit graph with branches, tags and uncommitted changes" width="100%" />
 
@@ -56,6 +59,20 @@ Inspired by the best graphical Git clients, written in C# with Avalonia.
   </tr>
 </table>
 
+## Download
+
+Grab the installer for your system from the **[latest release](https://github.com/Deve1ne/git-ui/releases/latest)**:
+
+| System | File | Install |
+|---|---|---|
+| Windows 10 / 11 | `GitUi-<version>-win-x64.msi` | Double-click. Per-user install, no admin rights, Start menu and desktop shortcuts |
+| Debian / Ubuntu | `gitui_<version>_amd64.deb` (or `_arm64`) | `sudo apt install ./gitui_<version>_amd64.deb`, then `gitui` |
+| macOS | `GitUi-<version>-macos-arm64.zip` (Apple Silicon) or `-macos-x64.zip` (Intel) | Unzip, right-click `Install Git UI.command` > *Open* |
+
+Each package ships its own .NET runtime; only [Git](https://git-scm.com/) needs to be installed.
+The packages are not code-signed yet, so Windows SmartScreen and macOS Gatekeeper ask for a
+confirmation the first time.
+
 ## Getting started
 
 ### Requirements
@@ -85,6 +102,9 @@ python packaging/package.py win deb-amd64    # only some of them
 | macOS | `GitUi-<version>-macos-arm64.zip` (Apple Silicon), `-macos-x64.zip` (Intel) |
 
 Each package ships a self-contained .NET runtime. See [packaging/README.md](packaging/README.md) for details.
+
+Releases are built by GitHub Actions ([release.yml](.github/workflows/release.yml)): pushing a tag
+such as `v0.2.0` builds every installer and publishes them as a GitHub release.
 
 ## Keyboard shortcuts
 

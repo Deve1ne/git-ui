@@ -53,6 +53,9 @@ DEB_DEPENDS = ', '.join([
 
 
 def version():
+    # The release workflow passes the version of the pushed tag (v1.2.3 -> 1.2.3).
+    if os.environ.get('GITUI_VERSION'):
+        return os.environ['GITUI_VERSION'].strip()
     with open(PROJECT, encoding='utf-8') as f:
         match = re.search(r'<Version>([^<]+)</Version>', f.read())
     if not match:
@@ -69,7 +72,7 @@ def publish(rid):
     out = os.path.join(DIST, 'publish', rid)
     shutil.rmtree(out, ignore_errors=True)
     run('dotnet', 'publish', PROJECT, '-c', 'Release', '-r', rid, '--self-contained', 'true',
-        '-p:DebugType=None', '-p:DebugSymbols=false', '-o', out)
+        '-p:DebugType=None', '-p:DebugSymbols=false', '-p:Version=' + version(), '-o', out)
     return out
 
 

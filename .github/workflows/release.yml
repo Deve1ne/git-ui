@@ -1,0 +1,93 @@
+name: Release
+
+# Pushing a version tag (v1.2.3) builds every installer and publishes them as a GitHub release.
+# Run it by hand (Actions > Release > Run workflow) to only build the installers as artifacts.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Version from the tag
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: echo "GITUI_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: Build the MSI
+        run: python packaging/package.py win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-windows
+          path: dist/*.msi
+          if-no-files-found: error
+
+  linux-macos:
+    name: Linux and macOS packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Version from the tag
+        if: github.ref_type == 'tag'
+        run: echo "GITUI_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: Build the .deb and macOS packages
+        run: python packaging/package.py deb-amd64 deb-arm64 mac-arm64 mac-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-linux-macos
+          path: |
+            dist/*.deb
+            dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub release
+    needs: [windows, linux-macos]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Git UI ${{ github.ref_name }}
+          files: dist/*
+          body: |
+            Download the installer for your system below. **Git must be installed** on the machine.
+
+            | System | File | How to install |
+            |---|---|---|
+            | Windows 10 / 11 | `GitUi-*-win-x64.msi` | Double-click. Installs for the current user, no admin rights; Start menu and desktop shortcuts. |
+            | Debian / Ubuntu (x64) | `gitui_*_amd64.deb` | `sudo apt install ./gitui_*_amd64.deb`, then run `gitui` or use the app menu. |
+            | Debian / Ubuntu (ARM) | `gitui_*_arm64.deb` | Same as above. |
+            | macOS, Apple Silicon | `GitUi-*-macos-arm64.zip` | Unzip, right-click `Install Git UI.command` > Open. |
+            | macOS, Intel | `GitUi-*-macos-x64.zip` | Same as above. |
+
+            The packages are not code-signed yet: Windows SmartScreen may ask for confirmation (*More info* > *Run anyway*), and macOS needs the right-click > Open the first time.
