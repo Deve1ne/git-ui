@@ -12,6 +12,7 @@ Inspired by the best graphical Git clients, written in C# with Avalonia.
 ![Avalonia 12](https://img.shields.io/badge/Avalonia-12-8B44AC)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-2b2e36)
 ![Tests](https://img.shields.io/badge/tests-300%2B-2ea44f)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Deve1ne/git-ui?label=download&color=0969da)](https://github.com/Deve1ne/git-ui/releases/latest)
 
 **[Download](https://github.com/Deve1ne/git-ui/releases/latest)** · [All releases](https://github.com/Deve1ne/git-ui/releases) · [Build from source](#run-from-source)
@@ -135,6 +136,10 @@ hooks, credentials, signing and your configuration behave exactly as in a termin
 ```bash
 dotnet test
 ```
+
+## License
+
+[MIT](LICENSE) © Dimitri Even
 
 ---
 
