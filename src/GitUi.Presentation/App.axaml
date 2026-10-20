@@ -1,0 +1,161 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitUi.Presentation.App"
+             RequestedThemeVariant="Dark">
+             <!-- Dark by default; ThemeService switches it at startup from the saved setting and from the toolbar toggle. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Layout tokens: tabs/toolbar/panel/status-bar proportions of a classic three-pane git client. -->
+            <GridLength x:Key="ToolbarHeight">48</GridLength>
+            <GridLength x:Key="StatusBarHeight">26</GridLength>
+            <GridLength x:Key="RefPanelWidth">215</GridLength>
+            <GridLength x:Key="DetailPanelWidth">400</GridLength>
+            <x:Double x:Key="PanelHeaderHeight">22</x:Double>
+
+            <!-- Vector icons for the glyphs Linux fonts often lack (emoji, OCR fork, telephone recorder):
+                 drawn as PathIcon they look the same everywhere. 16 x 16 grid. -->
+            <StreamGeometry x:Key="IconFolder">F1 M1,2.5 H6 L7.5,4 H15 V13.5 H1 Z M2.3,5.3 H13.7 V12.2 H2.3 Z</StreamGeometry>
+            <StreamGeometry x:Key="IconTrash">F1 M6,1 H10 V2.6 H14 V4 H2 V2.6 H6 Z M3.2,5.2 H12.8 L12,14.5 H4 Z M4.6,6.5 H11.4 L10.8,13.2 H5.2 Z M6.6,7.6 H7.6 V12 H6.6 Z M8.4,7.6 H9.4 V12 H8.4 Z</StreamGeometry>
+            <StreamGeometry x:Key="IconBranch">M2.3,3 A2.2,2.2 0 1 1 6.7,3 A2.2,2.2 0 1 1 2.3,3 Z M2.3,13 A2.2,2.2 0 1 1 6.7,13 A2.2,2.2 0 1 1 2.3,13 Z M9.3,5 A2.2,2.2 0 1 1 13.7,5 A2.2,2.2 0 1 1 9.3,5 Z M3.8,3 H5.2 V13 H3.8 Z M12.2,6 C12.2,9.3 9.8,10.6 5,11.6 L5,10.1 C9,9.2 10.8,8.4 10.8,6 Z</StreamGeometry>
+            <StreamGeometry x:Key="IconUser">M4.5,4.8 A3.5,3.5 0 1 1 11.5,4.8 A3.5,3.5 0 1 1 4.5,4.8 Z M1.5,15 C1.5,11.3 4.6,9.6 8,9.6 C11.4,9.6 14.5,11.3 14.5,15 Z</StreamGeometry>
+            <StreamGeometry x:Key="IconSearch">M1.5,6.5 A5,5 0 1 1 11.5,6.5 A5,5 0 1 1 1.5,6.5 Z M2.9,6.5 A3.6,3.6 0 1 0 10.1,6.5 A3.6,3.6 0 1 0 2.9,6.5 Z M9.6,10.9 L10.9,9.6 L14.9,13.6 L13.6,14.9 Z</StreamGeometry>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FCFCFC" />
+                    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#EBEBEB" />
+                    <SolidColorBrush x:Key="ToolbarButtonHoverBrush" Color="#FAFAFA" />
+                    <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#F3F3F3" />
+                    <SolidColorBrush x:Key="PanelHeaderBackgroundBrush" Color="#F0F0F0" />
+                    <SolidColorBrush x:Key="PanelBorderBrush" Color="#C6C6C6" />
+                    <SolidColorBrush x:Key="TextNormalBrush" Color="#E6000000" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#99000000" />
+                    <SolidColorBrush x:Key="HoverRowBrush" Color="#195F8EED" />
+                    <SolidColorBrush x:Key="SelectedRowBrush" Color="#335F8EED" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1C1E23" />
+                    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#31353F" />
+                    <SolidColorBrush x:Key="ToolbarButtonHoverBrush" Color="#3E4350" />
+                    <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#272A31" />
+                    <SolidColorBrush x:Key="PanelHeaderBackgroundBrush" Color="#32363F" />
+                    <SolidColorBrush x:Key="PanelBorderBrush" Color="#14FFFFFF" />
+                    <SolidColorBrush x:Key="TextNormalBrush" Color="#BFFFFFFF" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#99FFFFFF" />
+                    <SolidColorBrush x:Key="HoverRowBrush" Color="#0DFFFFFF" />
+                    <SolidColorBrush x:Key="SelectedRowBrush" Color="#335F8EED" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <Style Selector="Button.toolbar">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="10,2" />
+            <Setter Property="MinWidth" Value="52" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextNormalBrush}" />
+        </Style>
+        <Style Selector="Button.toolbar:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarButtonHoverBrush}" />
+        </Style>
+        <Style Selector="Button.toolbar:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.toolbar:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="Button.toolbar TextBlock.icon">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.toolbar PathIcon.icon">
+            <Setter Property="Width" Value="15" />
+            <Setter Property="Height" Value="15" />
+            <Setter Property="Margin" Value="0,2,0,3" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.toolbar TextBlock.label">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Border.panel-header">
+            <Setter Property="Height" Value="{StaticResource PanelHeaderHeight}" />
+            <Setter Property="Background" Value="{DynamicResource PanelHeaderBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="8,0" />
+        </Style>
+        <Style Selector="Border.panel-header TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+
+        <Style Selector="GridSplitter.panel-edge">
+            <Setter Property="Background" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="MinWidth" Value="1" />
+            <Setter Property="MinHeight" Value="1" />
+        </Style>
+
+        <Style Selector="Expander.ref-section">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Expander.ref-section /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Expander.ref-section /template/ ToggleButton#ExpanderHeader TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextNormalBrush}" />
+        </Style>
+        <!-- Headers with an action button are logical children of the Expander, not of its template:
+             they need their own title style, and the header must stretch so the button sits on the right. -->
+        <Style Selector="Expander.ref-section /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextNormalBrush}" />
+        </Style>
+        <!-- Fluent's expander body has a min height and padding meant for forms; a ref list needs neither. -->
+        <Style Selector="Expander.ref-section /template/ Border#ExpanderContent">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ListBox.ref-list">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.ref-list ListBoxItem">
+            <Setter Property="Padding" Value="22,0,8,0" />
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="ListBox.ref-list ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverRowBrush}" />
+        </Style>
+        <Style Selector="ListBox.ref-list ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+        </Style>
+    </Application.Styles>
+</Application>

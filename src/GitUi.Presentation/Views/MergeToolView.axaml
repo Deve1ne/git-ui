@@ -1,0 +1,208 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:git="clr-namespace:GitUi.Application.Abstractions;assembly=GitUi.Application"
+             xmlns:services="clr-namespace:GitUi.Application.Services;assembly=GitUi.Application"
+             xmlns:conv="clr-namespace:GitUi.Presentation.Converters"
+             x:Class="GitUi.Presentation.Views.MergeToolView"
+             x:DataType="vm:MergeToolViewModel"
+             Background="{DynamicResource AppBackgroundBrush}">
+    <!-- Conflict editor: A (current) | B (incoming) on top, Output below. -->
+    <UserControl.Styles>
+        <Style Selector="ItemsControl.pane">
+            <Setter Property="FontFamily" Value="Consolas,Menlo,monospace" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="Border.pane-header">
+            <Setter Property="Background" Value="{DynamicResource PanelHeaderBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+        <Style Selector="Border.filler">
+            <!-- padding row facing extra lines of the other side -->
+            <Setter Property="Background" Value="#14808080" />
+            <Setter Property="Margin" Value="30,3,8,3" />
+            <Setter Property="CornerRadius" Value="3" />
+        </Style>
+        <Style Selector="TextBlock.line-number">
+            <!-- gutter: line number in that side's file -->
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.tool">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="10,2" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Classes="panel-header" Height="36" Padding="8,0">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Text="MERGE CONFLICT" />
+                    <TextBlock Text="{Binding FilePath}" Foreground="{DynamicResource TextNormalBrush}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsLineMerge}">
+                    <Button Classes="tool" Content="◀" ToolTip.Tip="Previous conflict" Command="{Binding PreviousConflictCommand}" />
+                    <TextBlock Text="{Binding ConflictPosition}" VerticalAlignment="Center" Margin="4,0" />
+                    <Button Classes="tool" Content="▶" ToolTip.Tip="Next conflict" Command="{Binding NextConflictCommand}" />
+                    <Button Classes="tool" Content="Take A" ToolTip.Tip="This conflict: keep the current side only" Command="{Binding TakeCurrentOursCommand}" />
+                    <Button Classes="tool" Content="Take B" ToolTip.Tip="This conflict: keep the incoming side only" Command="{Binding TakeCurrentTheirsCommand}" />
+                    <Button Classes="tool" Content="Take both" ToolTip.Tip="This conflict: A then B" Command="{Binding TakeCurrentBothCommand}" />
+                    <Rectangle Width="1" Margin="6,8" Fill="{DynamicResource PanelBorderBrush}" />
+                    <Button Classes="tool" Content="Take all A" Command="{Binding TakeAllOursCommand}" />
+                    <Button Classes="tool" Content="Take all B" Command="{Binding TakeAllTheirsCommand}" />
+                    <Button Classes="tool" Content="Untake all" Command="{Binding UntakeAllCommand}" />
+                    <Rectangle Width="1" Margin="6,8" Fill="{DynamicResource PanelBorderBrush}" />
+                    <Button Classes="tool accent" Content="Save" ToolTip.Tip="Write the output and mark the file resolved" Command="{Binding SaveCommand}" />
+                    <Button Classes="tool" Content="Close" Command="{Binding CloseCommand}" />
+                </StackPanel>
+                <Button Grid.Column="2" Classes="tool" Content="Close" Command="{Binding CloseCommand}" IsVisible="{Binding IsDeleteConflict}" />
+            </Grid>
+        </Border>
+
+        <!-- Modify / delete conflict: no lines to pick, keep one side's choice -->
+        <StackPanel DockPanel.Dock="Top" IsVisible="{Binding IsDeleteConflict}" Margin="24" Spacing="12">
+            <TextBlock Text="{Binding DeleteConflictMessage}" TextWrapping="Wrap" FontSize="14" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Keep current branch's choice" Command="{Binding TakeWholeFileCommand}"
+                        CommandParameter="{x:Static git:ConflictSide.Ours}" />
+                <Button Content="Keep incoming branch's choice" Command="{Binding TakeWholeFileCommand}"
+                        CommandParameter="{x:Static git:ConflictSide.Theirs}" />
+            </StackPanel>
+        </StackPanel>
+
+        <Grid IsVisible="{Binding IsLineMerge}" RowDefinitions="*,Auto,*">
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto,*">
+                <DockPanel Grid.Column="0">
+                    <Border DockPanel.Dock="Top" Classes="pane-header">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding OursHeader}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="tool" Content="Take whole file" ToolTip.Tip="Resolve with the current version of the file"
+                                    Command="{Binding TakeWholeFileCommand}" CommandParameter="{x:Static git:ConflictSide.Ours}" />
+                        </Grid>
+                    </Border>
+                    <ScrollViewer Name="OursScroll" HorizontalScrollBarVisibility="Auto">
+                        <ItemsControl Classes="pane" Name="OursPane" ItemsSource="{Binding OursRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MergePaneRow">
+                                    <!-- Fixed row height: rows of A and B stay face to face while scrolling together. -->
+                                    <Grid ColumnDefinitions="40,*" Height="22">
+                                        <TextBlock Grid.Column="0" Classes="line-number" Text="{Binding LineNumber}" />
+                                        <Panel Grid.Column="1">
+                                            <!-- Block header: take or drop this whole side of the conflict -->
+                                            <Border IsVisible="{Binding IsBlockHeader}" Background="#664D88FF" CornerRadius="3" Margin="0,1,8,1" Padding="6,0">
+                                                <CheckBox Content="{Binding Block.Label, FallbackValue=''}" IsChecked="{Binding Block.IsTaken, Mode=OneWay, FallbackValue=False}"
+                                                          Command="{Binding Block.ToggleCommand, FallbackValue={x:Null}}" IsEnabled="{Binding Block.HasLines, FallbackValue=False}"
+                                                          FontFamily="Segoe UI,sans-serif" FontSize="11" FontWeight="SemiBold" MinHeight="0" Padding="4,0" VerticalAlignment="Center" />
+                                            </Border>
+                                        <TextBlock Text="{Binding Text}" Margin="30,0,8,0" Opacity="0.55" VerticalAlignment="Center" IsVisible="{Binding IsStable}" />
+                                        <Border Classes="filler" IsVisible="{Binding IsFiller}" />
+                                        <Grid ColumnDefinitions="30,*" Background="#334D88FF" IsVisible="{Binding IsConflict}">
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding Line.IsTaken, FallbackValue=False}" MinHeight="0" Padding="0"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Text}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                        </Grid>
+                                        </Panel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+                <GridSplitter Grid.Column="1" Classes="panel-edge" Width="3" ResizeDirection="Columns" />
+                <DockPanel Grid.Column="2">
+                    <Border DockPanel.Dock="Top" Classes="pane-header">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding TheirsHeader}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="tool" Content="Take whole file" ToolTip.Tip="Resolve with the incoming version of the file"
+                                    Command="{Binding TakeWholeFileCommand}" CommandParameter="{x:Static git:ConflictSide.Theirs}" />
+                        </Grid>
+                    </Border>
+                    <ScrollViewer Name="TheirsScroll" HorizontalScrollBarVisibility="Auto">
+                        <ItemsControl Classes="pane" Name="TheirsPane" ItemsSource="{Binding TheirsRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MergePaneRow">
+                                    <!-- Fixed row height: rows of A and B stay face to face while scrolling together. -->
+                                    <Grid ColumnDefinitions="40,*" Height="22">
+                                        <TextBlock Grid.Column="0" Classes="line-number" Text="{Binding LineNumber}" />
+                                        <Panel Grid.Column="1">
+                                            <!-- Block header: take or drop this whole side of the conflict -->
+                                            <Border IsVisible="{Binding IsBlockHeader}" Background="#66C517B6" CornerRadius="3" Margin="0,1,8,1" Padding="6,0">
+                                                <CheckBox Content="{Binding Block.Label, FallbackValue=''}" IsChecked="{Binding Block.IsTaken, Mode=OneWay, FallbackValue=False}"
+                                                          Command="{Binding Block.ToggleCommand, FallbackValue={x:Null}}" IsEnabled="{Binding Block.HasLines, FallbackValue=False}"
+                                                          FontFamily="Segoe UI,sans-serif" FontSize="11" FontWeight="SemiBold" MinHeight="0" Padding="4,0" VerticalAlignment="Center" />
+                                            </Border>
+                                        <TextBlock Text="{Binding Text}" Margin="30,0,8,0" Opacity="0.55" VerticalAlignment="Center" IsVisible="{Binding IsStable}" />
+                                        <Border Classes="filler" IsVisible="{Binding IsFiller}" />
+                                        <Grid ColumnDefinitions="30,*" Background="#33C517B6" IsVisible="{Binding IsConflict}">
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding Line.IsTaken, FallbackValue=False}" MinHeight="0" Padding="0"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Text}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                        </Grid>
+                                        </Panel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Grid>
+
+            <GridSplitter Grid.Row="1" Classes="panel-edge" Height="3" ResizeDirection="Rows" />
+
+            <DockPanel Grid.Row="2">
+                <Border DockPanel.Dock="Top" Classes="pane-header">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Output" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <!-- legend of the highlight -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsOutputEdited}" VerticalAlignment="Center">
+                                <Border Background="#334D88FF" CornerRadius="3" Padding="6,0"><TextBlock Text="A current" FontSize="11" /></Border>
+                                <Border Background="#33C517B6" CornerRadius="3" Padding="6,0"><TextBlock Text="B incoming" FontSize="11" /></Border>
+                                <Border Background="#40DE9B43" CornerRadius="3" Padding="6,0"><TextBlock Text="unresolved" FontSize="11" /></Border>
+                            </StackPanel>
+                            <TextBlock Text="(edited by hand — ticking lines no longer updates it)" IsVisible="{Binding IsOutputEdited}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                            <Button Classes="tool" Content="Edit manually" IsVisible="{Binding !IsOutputEdited}" Command="{Binding EditOutputCommand}"
+                                    ToolTip.Tip="Edit the merged text freely (the highlight is replaced by a text editor)" />
+                            <Button Classes="tool" Content="Rebuild from selection" IsVisible="{Binding IsOutputEdited}"
+                                    Command="{Binding ResetOutputCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <Panel>
+                    <!-- Highlighted output: each line tinted by the side it comes from -->
+                    <ScrollViewer Name="OutputScroll" HorizontalScrollBarVisibility="Auto" IsVisible="{Binding !IsOutputEdited}">
+                        <ItemsControl Classes="pane" Name="OutputPane" ItemsSource="{Binding OutputLines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="services:MergeOutputLine">
+                                    <Grid ColumnDefinitions="40,30,*" Height="22"
+                                          Background="{Binding Origin, Converter={x:Static conv:MergeLineOriginToBrushConverter.Instance}}">
+                                        <TextBlock Grid.Column="0" Classes="line-number" Text="{Binding LineNumber}" />
+                                        <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   Text="{Binding Origin, Converter={x:Static conv:MergeLineOriginToMarkerConverter.Instance}}" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Text}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBox Text="{Binding OutputText}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap" IsVisible="{Binding IsOutputEdited}"
+                             FontFamily="Consolas,Menlo,monospace" FontSize="13" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                </Panel>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

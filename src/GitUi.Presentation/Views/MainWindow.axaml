@@ -1,0 +1,443 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:GitUi.Presentation.Views"
+        xmlns:controls="clr-namespace:GitUi.Presentation.Controls"
+        xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+        xmlns:git="clr-namespace:GitUi.Application.Abstractions;assembly=GitUi.Application"
+        xmlns:services="clr-namespace:GitUi.Presentation.Services"
+        x:Class="GitUi.Presentation.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Git UI" Width="1280" Height="800" MinWidth="900" MinHeight="500"
+        Icon="/Assets/gitui.ico"
+        Background="{DynamicResource AppBackgroundBrush}">
+    <Window.Resources>
+        <!-- One instance shared by the graph header and the canvas so column resizes stay aligned. -->
+        <controls:CommitGraphColumns x:Key="GraphColumns" />
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="Border.repo-tab">
+            <Setter Property="Padding" Value="14,0,6,0" />
+            <Setter Property="Margin" Value="0,4,1,0" />
+            <Setter Property="CornerRadius" Value="4,4,0,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.repo-tab:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ToolbarButtonHoverBrush}" />
+        </Style>
+        <Style Selector="Border.repo-tab.active">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBackgroundBrush}" />
+        </Style>
+        <Style Selector="Border.repo-tab TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.repo-tab.active TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextNormalBrush}" />
+        </Style>
+        <Style Selector="Button.tab-close">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+    </Window.Styles>
+
+    <!-- Repo tabs / toolbar / [ref panel | graph | detail panel] / terminal / status bar. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="34" />
+            <RowDefinition Height="{StaticResource ToolbarHeight}" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="{StaticResource StatusBarHeight}" />
+        </Grid.RowDefinitions>
+
+        <!-- Repository tabs -->
+        <Border Grid.Row="0" Background="{DynamicResource AppBackgroundBrush}">
+            <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
+                <!-- App logo, top-left: opens the application menu (New tab, Open, Clone, Init, Recent...) -->
+                <Button Name="AppMenuButton" Background="Transparent" BorderThickness="0" Padding="4" Margin="0,0,6,0"
+                        VerticalAlignment="Center" ToolTip.Tip="Menu — open, clone or create a repository">
+                    <Image Source="/Assets/gitui-256.png" Width="22" Height="22" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedLeft" />
+                    </Button.Flyout>
+                </Button>
+                <ItemsControl ItemsSource="{Binding Tabs}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RepositoryTab">
+                            <Border Classes="repo-tab" Classes.active="{Binding IsActive}" ToolTip.Tip="{Binding Path}"
+                                    Tapped="OnTabTapped" ContextRequested="OnTabContextRequested">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" MaxWidth="220" TextTrimming="CharacterEllipsis" />
+                                    <Button Classes="tab-close" Content="✕" ToolTip.Tip="Close tab"
+                                            Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseTabCommand}"
+                                            CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Classes="tab-close" Content="+" FontSize="15" Margin="4,0" ToolTip.Tip="New tab: open, clone or initialize a repository"
+                        Command="{Binding ShowHomeCommand}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="1" Background="{DynamicResource ToolbarBackgroundBrush}"
+                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto,*">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2" Margin="6,0">
+                    <Button Classes="toolbar" Command="{Binding OpenRepositoryCommand}" ToolTip.Tip="Open a repository (Ctrl+O)">
+                        <StackPanel>
+                            <PathIcon Classes="icon" Data="{StaticResource IconFolder}" />
+                            <TextBlock Classes="label" Text="Open" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="toolbar" Name="OpenMenuButton" MinWidth="16" Padding="2,2" ToolTip.Tip="Open, clone, new repository, recent">
+                        <TextBlock Text="▾" FontSize="10" VerticalAlignment="Center" />
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft" />
+                        </Button.Flyout>
+                    </Button>
+                    <StackPanel VerticalAlignment="Center" Margin="8,0,0,0">
+                        <TextBlock Text="repository" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding RepositoryName}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextNormalBrush}"
+                                   ToolTip.Tip="{Binding CurrentRepositoryPath}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                    <StackPanel Name="HistoryButtons" x:DataType="vm:HistoryViewModel" Orientation="Horizontal" Spacing="2">
+                        <Button Classes="toolbar" Command="{Binding UndoCommand}" ToolTip.Tip="{Binding UndoTooltip}">
+                            <StackPanel>
+                                <TextBlock Classes="icon" Text="↶" />
+                                <TextBlock Classes="label" Text="Undo" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding RedoCommand}" ToolTip.Tip="{Binding RedoTooltip}">
+                            <StackPanel>
+                                <TextBlock Classes="icon" Text="↷" />
+                                <TextBlock Classes="label" Text="Redo" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <Rectangle Width="1" Margin="6,10" Fill="{DynamicResource PanelBorderBrush}" />
+
+                    <StackPanel Name="RemoteButtons" x:DataType="vm:RemoteActionsViewModel" Orientation="Horizontal" Spacing="0">
+                        <Button Classes="toolbar" Command="{Binding FetchCommand}" ToolTip.Tip="Fetch all remotes (options in ▾)">
+                            <StackPanel>
+                                <TextBlock Classes="icon" Text="⟳" />
+                                <TextBlock Classes="label" Text="Fetch" />
+                            </StackPanel>
+                        </Button>
+                        <!-- Fetch options: saved, and used by Fetch, the remotes' menus and auto-fetch -->
+                        <Button Classes="toolbar" MinWidth="16" Padding="2,2" ToolTip.Tip="Fetch options">
+                            <TextBlock Text="▾" FontSize="10" VerticalAlignment="Center" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <MenuItem Header="Fetch all remotes" Command="{Binding FetchCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="Prune remote branches deleted on the server (--prune)" ToggleType="CheckBox"
+                                              IsChecked="{Binding FetchPrune, Mode=TwoWay}" StaysOpenOnClick="True" />
+                                    <MenuItem Header="Prune local tags deleted on the server (--prune-tags)" ToggleType="CheckBox"
+                                              IsChecked="{Binding FetchPruneTags, Mode=TwoWay}" StaysOpenOnClick="True" />
+                                    <Separator />
+                                    <MenuItem Header="Fetch every tag (--tags)" ToggleType="CheckBox"
+                                              IsChecked="{Binding FetchAllTags, Mode=TwoWay}" StaysOpenOnClick="True" />
+                                    <MenuItem Header="Fetch no tags (--no-tags)" ToggleType="CheckBox"
+                                              IsChecked="{Binding FetchNoTags, Mode=TwoWay}" StaysOpenOnClick="True" />
+                                    <Separator />
+                                    <MenuItem Header="Fetch inside submodules too (--recurse-submodules)" ToggleType="CheckBox"
+                                              IsChecked="{Binding FetchRecurseSubmodules, Mode=TwoWay}" StaysOpenOnClick="True" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding PullCommand}" ToolTip.Tip="{Binding PullModeLabel}">
+                            <StackPanel>
+                                <TextBlock Classes="icon" Text="↓" />
+                                <TextBlock Classes="label" Text="Pull" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="toolbar" MinWidth="16" Padding="2,2" ToolTip.Tip="Pull options">
+                            <TextBlock Text="▾" FontSize="10" VerticalAlignment="Center" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <MenuItem Header="Fetch all" Command="{Binding FetchCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="Pull (fast-forward if possible)" Command="{Binding PullWithModeCommand}"
+                                              CommandParameter="{x:Static git:GitPullMode.Merge}" />
+                                    <MenuItem Header="Pull (fast-forward only)" Command="{Binding PullWithModeCommand}"
+                                              CommandParameter="{x:Static git:GitPullMode.FastForwardOnly}" />
+                                    <MenuItem Header="Pull (rebase)" Command="{Binding PullWithModeCommand}"
+                                              CommandParameter="{x:Static git:GitPullMode.Rebase}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding PushCommand}" ToolTip.Tip="Push">
+                            <StackPanel>
+                                <TextBlock Classes="icon" Text="↑" />
+                                <TextBlock Classes="label" Text="Push" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <Rectangle Width="1" Margin="6,10" Fill="{DynamicResource PanelBorderBrush}" />
+
+                    <Button Classes="toolbar" Name="BranchButton" ToolTip.Tip="Create a branch">
+                        <StackPanel>
+                            <PathIcon Classes="icon" Data="{StaticResource IconBranch}" />
+                            <TextBlock Classes="label" Text="Branch" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <StackPanel x:DataType="vm:BranchViewModel"
+                                            Orientation="Horizontal" Spacing="4">
+                                    <TextBox Text="{Binding NewBranchName}" PlaceholderText="New branch name" Width="200">
+                                        <TextBox.KeyBindings>
+                                            <KeyBinding Gesture="Enter" Command="{Binding CreateBranchCommand}" />
+                                        </TextBox.KeyBindings>
+                                    </TextBox>
+                                    <Button Content="Create" Command="{Binding CreateBranchCommand}" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <StackPanel Name="StashButtons" x:DataType="vm:StashViewModel" Orientation="Horizontal" Spacing="2">
+                        <Button Classes="toolbar" Command="{Binding SaveCommand}"
+                                ToolTip.Tip="Stash all changes, new files included (uses the commit summary as message when one is typed)">
+                            <StackPanel>
+                                <TextBlock Classes="icon" Text="⊟" />
+                                <TextBlock Classes="label" Text="Stash" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="toolbar" MinWidth="16" Padding="2,2" ToolTip.Tip="Stash options">
+                            <TextBlock Text="▾" FontSize="10" VerticalAlignment="Center" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <MenuItem Header="Stash" Command="{Binding SaveCommand}" />
+                                    <MenuItem Header="Stash with message…" Command="{Binding SaveWithMessageCommand}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Classes="toolbar" Command="{Binding PopLatestCommand}" ToolTip.Tip="Pop the most recent stash">
+                            <StackPanel>
+                                <TextBlock Classes="icon" Text="⊞" />
+                                <TextBlock Classes="label" Text="Pop" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <Rectangle Width="1" Margin="6,10" Fill="{DynamicResource PanelBorderBrush}" />
+                    <Button Classes="toolbar" Click="OnToggleCommandPanelClick" ToolTip.Tip="Toggle terminal">
+                        <StackPanel>
+                            <TextBlock Classes="icon" Text="&gt;_" />
+                            <TextBlock Classes="label" Text="Terminal" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="6,0" Spacing="2">
+                    <!-- Proactive conflict detection with the target branch -->
+                    <Button Classes="toolbar" Name="ConflictIndicator" x:DataType="vm:ConflictDetectionViewModel"
+                            IsVisible="{Binding IsVisible}" ToolTip.Tip="{Binding Target, StringFormat='Conflict detection against {0}'}">
+                        <StackPanel>
+                            <TextBlock Classes="icon" Text="{Binding Icon}" Foreground="#DE9B43" IsVisible="{Binding HasConflicts}" />
+                            <TextBlock Classes="icon" Text="{Binding Icon}" Foreground="#5CB85C" IsVisible="{Binding !HasConflicts}" />
+                            <TextBlock Classes="label" Text="{Binding Label}" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="380" Spacing="8">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" />
+                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12" />
+                                    <TextBlock Text="{Binding BranchName, StringFormat='Your branch: {0}'}" FontSize="12" />
+                                    <TextBlock Text="{Binding Target, StringFormat='Merge target: {0}'}" FontSize="12" />
+                                    <StackPanel IsVisible="{Binding HasConflicts}" Spacing="4">
+                                        <TextBlock Text="Conflicting files" FontWeight="SemiBold" FontSize="12" />
+                                        <ItemsControl ItemsSource="{Binding ConflictedFiles}" MaxHeight="160">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <TextBlock Text="{Binding}" FontFamily="Consolas,monospace" FontSize="12" Foreground="#DE9B43" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+                                            <Button Content="{Binding Target, StringFormat='Merge {0} in'}" Command="{Binding MergeTargetCommand}" />
+                                            <Button Content="{Binding Target, StringFormat='Rebase onto {0}'}" Command="{Binding RebaseOntoTargetCommand}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Button Content="Check now" Command="{Binding CheckCommand}" />
+                                        <Button Content="Change target…" Command="{Binding ChangeTargetCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Classes="toolbar" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch light / dark theme">
+                        <StackPanel>
+                            <TextBlock Classes="icon" Text="{Binding ThemeToggleIcon}" />
+                            <TextBlock Classes="label" Text="{Binding ThemeToggleLabel}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Ref panel | graph | detail panel -->
+        <Grid Grid.Row="2" Name="MainColumns">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource RefPanelWidth}" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="{StaticResource DetailPanelWidth}" />
+            </Grid.ColumnDefinitions>
+            <views:RefPanel Grid.Column="0" Name="RefPanelControl" MinWidth="150" />
+            <GridSplitter Grid.Column="1" Classes="panel-edge" Width="3" ResizeDirection="Columns" />
+
+            <Grid Grid.Column="2" Name="GraphHost">
+                <DockPanel>
+                    <!-- Bisect in progress: next step, Good / Bad / Skip for the checked-out commit, Reset -->
+                    <Border DockPanel.Dock="Top" Name="BisectBanner" x:DataType="vm:BisectViewModel" IsVisible="{Binding IsActive}"
+                            Background="#2215A0BF" BorderBrush="#15A0BF" BorderThickness="0,0,0,1" Padding="10,6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Headline}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="10,0,0,0" VerticalAlignment="Center">
+                                <Button Content="Good" Command="{Binding GoodCommand}" IsVisible="{Binding CanMarkCurrent}" ToolTip.Tip="The checked-out commit does not have the bug" />
+                                <Button Content="Bad" Command="{Binding BadCommand}" IsVisible="{Binding CanMarkCurrent}" ToolTip.Tip="The checked-out commit has the bug" />
+                                <Button Content="Skip" Command="{Binding SkipCommand}" IsVisible="{Binding CanMarkCurrent}" ToolTip.Tip="The checked-out commit cannot be tested" />
+                                <Button Content="Show it" Command="{Binding ShowFirstBadCommand}" IsVisible="{Binding IsFinished}" />
+                                <Button Content="Reset" Command="{Binding ResetCommand}" ToolTip.Tip="End the bisect and go back to where it started (git bisect reset)" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border DockPanel.Dock="Top" Classes="panel-header" Padding="0">
+                        <controls:CommitGraphHeader Columns="{StaticResource GraphColumns}"
+                                                    Foreground="{DynamicResource TextSecondaryBrush}"
+                                                    SeparatorBrush="{DynamicResource PanelBorderBrush}" />
+                    </Border>
+                    <Panel>
+                        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                            <controls:CommitGraphCanvas Name="GraphCanvas" x:DataType="vm:CommitGraphViewModel"
+                                                        Columns="{StaticResource GraphColumns}" SelectedRow="{Binding SelectedRow}"
+                                                        SearchMatches="{Binding SearchMatches}" />
+                        </ScrollViewer>
+                        <!-- Graph search (Ctrl+F): Enter / Shift+Enter walk the matches, Esc closes -->
+                        <Border Name="GraphSearchBar" x:DataType="vm:CommitGraphViewModel" IsVisible="{Binding IsSearchOpen}"
+                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,18,0" Padding="6,4"
+                                CornerRadius="4" Background="{DynamicResource PanelHeaderBackgroundBrush}"
+                                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" BoxShadow="0 2 8 0 #66000000">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBox Name="GraphSearchBox" Width="280" Text="{Binding SearchText}" FontSize="12" MinHeight="26" Padding="6,3"
+                                         PlaceholderText="Search commits: message, author, SHA, branch">
+                                    <TextBox.KeyBindings>
+                                        <KeyBinding Gesture="Enter" Command="{Binding NextMatchCommand}" />
+                                        <KeyBinding Gesture="Shift+Enter" Command="{Binding PreviousMatchCommand}" />
+                                        <KeyBinding Gesture="Escape" Command="{Binding CloseSearchCommand}" />
+                                    </TextBox.KeyBindings>
+                                </TextBox>
+                                <TextBlock Text="{Binding SearchSummary}" FontSize="11" MinWidth="60" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <Button Content="▲" Command="{Binding PreviousMatchCommand}" ToolTip.Tip="Previous match (Shift+Enter)"
+                                        Background="Transparent" BorderThickness="0" Padding="6,0" FontSize="10" />
+                                <Button Content="▼" Command="{Binding NextMatchCommand}" ToolTip.Tip="Next match (Enter)"
+                                        Background="Transparent" BorderThickness="0" Padding="6,0" FontSize="10" />
+                                <Button Content="✕" Command="{Binding CloseSearchCommand}" ToolTip.Tip="Close search (Esc)"
+                                        Background="Transparent" BorderThickness="0" Padding="6,0" FontSize="11" />
+                            </StackPanel>
+                        </Border>
+                    </Panel>
+                </DockPanel>
+                <views:DiffView Name="DiffViewControl" x:DataType="vm:StagingViewModel" IsVisible="{Binding IsDiffVisible}" />
+                <views:CommitDiffView Name="CommitDiffControl" x:DataType="vm:CommitDetailsViewModel" IsVisible="{Binding IsDiffVisible}" />
+                <views:FileHistoryView Name="FileHistoryControl" x:DataType="vm:FileHistoryViewModel" IsVisible="{Binding IsOpen}" />
+                <views:InteractiveRebaseView Name="InteractiveRebaseControl" x:DataType="vm:InteractiveRebaseViewModel" IsVisible="{Binding IsOpen}" />
+                <views:MergeToolView Name="MergeToolControl" x:DataType="vm:MergeToolViewModel" IsVisible="{Binding IsOpen}" />
+            </Grid>
+
+            <GridSplitter Grid.Column="3" Classes="panel-edge" Width="3" ResizeDirection="Columns" />
+            <Panel Grid.Column="4" MinWidth="280">
+                <DockPanel Name="WorkingDirectoryPanel" Background="{DynamicResource PanelBackgroundBrush}">
+                    <Border DockPanel.Dock="Top" Classes="panel-header">
+                        <TextBlock Text="WORKING DIRECTORY" />
+                    </Border>
+                    <views:StagingPanel Name="StagingPanelControl" />
+                </DockPanel>
+                <!-- Commit selected in the graph: its detail replaces the working directory -->
+                <views:CommitDetailsPanel Name="CommitDetailsControl" x:DataType="vm:CommitDetailsViewModel" IsVisible="{Binding IsVisible}" />
+            </Panel>
+        </Grid>
+
+        <!-- New-tab page over the repository view -->
+        <!-- The panel carries the visibility: HomeView's own DataContext is the HomeViewModel, so a
+             binding on HomeView itself would not see MainWindowViewModel.IsHomeVisible. -->
+        <Panel Grid.Row="2" IsVisible="{Binding IsHomeVisible}">
+            <views:HomeView Name="HomeViewControl" />
+        </Panel>
+
+        <!-- Terminal -->
+        <views:CommandPanel Grid.Row="3" Name="CommandPanelControl"
+                             x:DataType="vm:CommandViewModel" IsVisible="{Binding IsPanelVisible}" Height="220" />
+
+        <!-- Status bar -->
+        <Border Grid.Row="4" Background="{DynamicResource ToolbarBackgroundBrush}"
+                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,1,0,0" Padding="10,0">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontSize="11" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <!-- Identity profile switcher -->
+                <Button Grid.Column="1" Name="ProfileButton" x:DataType="vm:ProfilesViewModel" Background="Transparent" BorderThickness="0"
+                        Padding="6,0" MinHeight="0" Margin="0,0,12,0" ToolTip.Tip="Identity profile: click to switch">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <PathIcon Data="{StaticResource IconUser}" Width="10" Height="10" VerticalAlignment="Center"
+                                  Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding ActiveName}" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                </Button>
+                <StackPanel Grid.Column="2" Name="StatusBranch" x:DataType="vm:BranchViewModel" Orientation="Horizontal" Spacing="4"
+                            IsVisible="{Binding CurrentBranchName, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <PathIcon Data="{StaticResource IconBranch}" Width="10" Height="10" VerticalAlignment="Center"
+                              Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Text="{Binding CurrentBranchName}" FontSize="11" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Toasts: short confirmations of what just happened -->
+        <ItemsControl Name="ToastHost" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
+                      x:DataType="services:NotificationService" ItemsSource="{Binding Toasts}" IsHitTestVisible="False">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="services:Toast">
+                    <Border Margin="0,6,0,0" Padding="14,9" CornerRadius="6" MaxWidth="420"
+                            Background="{DynamicResource ToolbarBackgroundBrush}" BorderBrush="#15A0BF" BorderThickness="1,1,1,1"
+                            BoxShadow="0 4 14 0 #66000000">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="✓" Foreground="#5CB85C" FontWeight="Bold" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Command palette (Ctrl+P), over everything -->
+        <views:CommandPaletteView Name="CommandPaletteControl" Grid.RowSpan="5" x:DataType="vm:CommandPaletteViewModel"
+                                  IsVisible="{Binding IsOpen}" />
+    </Grid>
+</Window>

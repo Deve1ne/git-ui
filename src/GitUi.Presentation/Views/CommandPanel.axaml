@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             x:Class="GitUi.Presentation.Views.CommandPanel"
+             x:DataType="vm:CommandViewModel"
+             Background="#1E1E1E">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Background="#252526" ColumnDefinitions="*,Auto" Height="28">
+            <TextBlock Grid.Column="0" Text="&gt;_ Terminal" Foreground="#CCCCCC" FontSize="12"
+                       VerticalAlignment="Center" Margin="10,0,0,0" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,6,0" Spacing="2">
+                <Button Command="{Binding ClearOutputCommand}" Background="Transparent" BorderThickness="0"
+                        Foreground="#CCCCCC" Padding="6,2" ToolTip.Tip="Clear">
+                    <PathIcon Data="{StaticResource IconTrash}" Width="12" Height="12" />
+                </Button>
+                <Button Content="✕" Command="{Binding ClosePanelCommand}" Background="Transparent" BorderThickness="0"
+                        Foreground="#CCCCCC" Padding="6,2" ToolTip.Tip="Close" />
+            </StackPanel>
+        </Grid>
+        <TextBox DockPanel.Dock="Bottom" Text="{Binding OutputText}" IsReadOnly="True" AcceptsReturn="True"
+                 FontFamily="Consolas,monospace" FontSize="12" Background="#1E1E1E" Foreground="#D4D4D4"
+                 BorderThickness="0" Padding="10,4" MaxHeight="140" />
+        <Grid ColumnDefinitions="Auto,*" Margin="10,4">
+            <TextBlock Grid.Column="0" Text="{Binding PromptPath, StringFormat='PS {0}>'}" Foreground="#4EC9B0"
+                       FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <TextBox Grid.Column="1" Text="{Binding CommandText}" Background="Transparent" BorderThickness="0"
+                     Foreground="#D4D4D4" CaretBrush="#D4D4D4" FontFamily="Consolas,monospace" FontSize="12"
+                     Padding="0" VerticalAlignment="Center">
+                <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding RunCommand}" />
+                </TextBox.KeyBindings>
+            </TextBox>
+        </Grid>
+    </DockPanel>
+</UserControl>

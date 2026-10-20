@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:conv="clr-namespace:GitUi.Presentation.Converters"
+             x:Class="GitUi.Presentation.Views.InteractiveRebaseView"
+             x:DataType="vm:InteractiveRebaseViewModel"
+             x:Name="RebaseRoot"
+             Background="{DynamicResource AppBackgroundBrush}">
+    <UserControl.Styles>
+        <Style Selector="ListBox.rebase-list">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.rebase-list ListBoxItem">
+            <Setter Property="Padding" Value="10,4" />
+        </Style>
+        <Style Selector="ListBox.rebase-list ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+        </Style>
+        <Style Selector="Button.move">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="panel-header" Height="32">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding Title}" />
+                <Button Grid.Column="1" Content="✕" Command="{Binding CloseCommand}" ToolTip.Tip="Cancel (nothing has run yet)"
+                        Background="Transparent" BorderThickness="0" Padding="8,0" VerticalAlignment="Stretch" />
+            </Grid>
+        </Border>
+        <Border DockPanel.Dock="Bottom" Padding="10,8" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Text="Applied top to bottom (oldest first). Keys on the selected commit: P pick, R reword, S squash, F fixup, D drop."
+                           FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                <Button Grid.Column="1" Content="Cancel" Command="{Binding CloseCommand}" Margin="8,0,0,0" />
+                <Button Grid.Column="2" Content="Start rebase" Command="{Binding StartCommand}" Classes="accent" Margin="8,0,0,0" />
+            </Grid>
+        </Border>
+        <ListBox Name="RebaseList" Classes="rebase-list" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:RebaseItemViewModel">
+                    <Grid ColumnDefinitions="Auto,110,70,*,Auto" RowDefinitions="Auto,Auto" Opacity="{Binding Opacity}">
+                        <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Button Classes="move" Content="▲" ToolTip.Tip="Move up (applied earlier)"
+                                    Command="{Binding #RebaseRoot.((vm:InteractiveRebaseViewModel)DataContext).MoveUpCommand}" CommandParameter="{Binding}" />
+                            <Button Classes="move" Content="▼" ToolTip.Tip="Move down (applied later)"
+                                    Command="{Binding #RebaseRoot.((vm:InteractiveRebaseViewModel)DataContext).MoveDownCommand}" CommandParameter="{Binding}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:InteractiveRebaseViewModel.Actions}" SelectedItem="{Binding Action}"
+                                  FontSize="12" MinHeight="26" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding ShortSha}" FontFamily="Consolas,monospace" FontSize="12" Foreground="#15A0BF"
+                                   VerticalAlignment="Center" Margin="10,0,0,0" />
+                        <TextBlock Grid.Column="3" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                   TextDecorations="{Binding IsDropped, Converter={x:Static conv:StrikethroughConverter.Instance}}" />
+                        <TextBlock Grid.Column="4" Text="{Binding Author}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center" Margin="10,0,0,0" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" IsVisible="{Binding IsReword}" Text="{Binding NewMessage}"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" Margin="0,6,0,2" FontSize="12" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

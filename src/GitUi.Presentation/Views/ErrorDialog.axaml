@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GitUi.Presentation.Views.ErrorDialog"
+        Title="An error occurred" Width="520" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PanelBackgroundBrush}">
+    <StackPanel Margin="18" Spacing="12">
+        <!-- Selectable, and scrollable for long git output, so the details can be copied. -->
+        <ScrollViewer MaxHeight="360" HorizontalScrollBarVisibility="Disabled">
+            <SelectableTextBlock Name="MessageText" TextWrapping="Wrap" />
+        </ScrollViewer>
+        <TextBlock Name="LogPathText" FontStyle="Italic" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <Button Name="CloseButton" Content="Close" HorizontalAlignment="Right" IsDefault="True" IsCancel="True" />
+    </StackPanel>
+</Window>

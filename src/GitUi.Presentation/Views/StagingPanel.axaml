@@ -1,0 +1,220 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:GitUi.Presentation.Converters"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:entities="clr-namespace:GitUi.Domain.Entities;assembly=GitUi.Domain"
+             x:Class="GitUi.Presentation.Views.StagingPanel"
+             x:DataType="vm:StagingViewModel"
+             x:Name="StagingRoot">
+    <UserControl.Resources>
+                <!-- One row per file (status letter, path, discard and stage toggle), or a folder in Tree view. -->
+        <DataTemplate x:Key="FileChangeTemplate" x:DataType="vm:ChangeFileRow">
+            <Panel Margin="{Binding Indent}">
+                <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsFolder}" Background="Transparent">
+                    <TextBlock Text="{Binding Chevron}" FontSize="10" Width="10" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+                <Grid ColumnDefinitions="18,*,Auto,Auto" Background="Transparent" IsVisible="{Binding IsFile}">
+                    <Grid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{Binding Item.IsStaged, Converter={x:Static conv:BoolToStageLabelConverter.Instance}}"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).ToggleStageCommand}"
+                                      CommandParameter="{Binding Item}" />
+                            <MenuItem Header="Discard changes" IsVisible="{Binding !Item.IsStaged}"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).DiscardFileCommand}"
+                                      CommandParameter="{Binding Item}" />
+                            <MenuItem Header="Add to .gitignore…" IsVisible="{Binding !Item.IsStaged}"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).AddToGitignoreCommand}"
+                                      CommandParameter="{Binding Item}" />
+                            <Separator />
+                            <MenuItem Header="Open file"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).OpenFileCommand}"
+                                      CommandParameter="{Binding Item}" />
+                            <MenuItem Header="Show in folder"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).RevealFileCommand}"
+                                      CommandParameter="{Binding Item}" />
+                            <MenuItem Header="Copy file path"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).CopyFilePathCommand}"
+                                      CommandParameter="{Binding Item}" />
+                            <Separator />
+                            <MenuItem Header="File History"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).ShowFileHistoryCommand}"
+                                      CommandParameter="{Binding Item}" />
+                            <MenuItem Header="File Blame"
+                                      Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).ShowFileBlameCommand}"
+                                      CommandParameter="{Binding Item}" />
+                        </ContextMenu>
+                    </Grid.ContextMenu>
+                    <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"
+                               Text="{Binding Item.ChangeType, Converter={x:Static conv:FileChangeTypeToLetterConverter.Instance}}"
+                               Foreground="{Binding Item.ChangeType, Converter={x:Static conv:FileChangeTypeToBrushConverter.Instance}}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" VerticalAlignment="Center"
+                               TextTrimming="LeadingCharacterEllipsis" ToolTip.Tip="{Binding Item.Path, FallbackValue=''}" />
+                    <Button Grid.Column="2" Classes="row-action" ToolTip.Tip="Discard changes" IsVisible="{Binding !Item.IsStaged}"
+                            Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).DiscardFileCommand}"
+                            CommandParameter="{Binding Item}" Margin="0,0,4,0">
+                        <PathIcon Data="{StaticResource IconTrash}" Width="11" Height="11" />
+                    </Button>
+                    <Button Grid.Column="3" Classes="row-action" Content="{Binding Item.IsStaged, Converter={x:Static conv:BoolToStageLabelConverter.Instance}}"
+                            Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).ToggleStageCommand}"
+                            CommandParameter="{Binding Item}" />
+                </Grid>
+            </Panel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="ListBox.file-list">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.file-list ListBoxItem">
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="MinHeight" Value="24" />
+        </Style>
+        <Style Selector="ListBox.file-list ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverRowBrush}" />
+        </Style>
+        <Style Selector="ListBox.file-list ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+        </Style>
+        <Style Selector="Button.row-action">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,1" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover Button.row-action, ListBoxItem:selected Button.row-action">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Border.section-header">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Background" Value="{DynamicResource PanelHeaderBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,1" />
+        </Style>
+        <Style Selector="Border.section-header TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.section-header Button">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+Enter" Command="{Binding CommitCommand}" />
+    </UserControl.KeyBindings>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto,*,Auto">
+        <StackPanel Grid.Row="0">
+            <!-- Merge / rebase / cherry-pick / revert stopped on conflicts -->
+            <Border IsVisible="{Binding IsOperationInProgress}" Background="#33DE9B43" BorderBrush="#DE9B43"
+                    BorderThickness="0,0,0,1" Padding="8,6">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding OperationBanner}" TextWrapping="Wrap" FontSize="12" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Content="Continue" Command="{Binding ContinueOperationCommand}" FontSize="11" Padding="10,2" />
+                        <Button Content="Abort" Command="{Binding AbortOperationCommand}" FontSize="11" Padding="10,2" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="8,4">
+                <TextBlock Text="{Binding FileChangesSummary}" FontSize="12" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <ToggleButton Grid.Column="1" Content="Tree" IsChecked="{Binding Diff.Settings.FilesAsTree}" FontSize="11" Padding="8,2" MinHeight="0" Margin="0,0,6,0"
+                              ToolTip.Tip="Show the files as a folder tree instead of full paths" />
+                <Button Grid.Column="2" Command="{Binding DiscardAllCommand}"
+                        IsVisible="{Binding TotalChangeCount, Converter={x:Static conv:IsPositiveConverter.Instance}}"
+                        ToolTip.Tip="Discard all changes (can be undone)" FontSize="11" Padding="8,2" MinHeight="0">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{StaticResource IconTrash}" Width="11" Height="11" VerticalAlignment="Center" />
+                        <TextBlock Text="Discard all" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- Unresolved conflicts: click a file to open the merge tool -->
+            <StackPanel IsVisible="{Binding HasConflicts}">
+                <Border Classes="section-header">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                        <TextBlock Text="{Binding ConflictedChanges.Count, StringFormat='Conflicted Files ({0})'}" Foreground="#D9413D" />
+                        <Button Grid.Column="1" Content="Auto-resolve" Command="{Binding AutoResolveAllCommand}" Margin="0,0,4,0"
+                                ToolTip.Tip="Merge each file's three versions again (diff3) and resolve the ones with no true conflict, like GitKraken" />
+                        <Button Grid.Column="2" Content="Take all incoming" Command="{Binding TakeAllIncomingCommand}" Margin="0,0,4,0" />
+                        <Button Grid.Column="3" Content="Mark all resolved" Command="{Binding MarkAllResolvedCommand}" />
+                    </Grid>
+                </Border>
+                <ListBox Classes="file-list" ItemsSource="{Binding ConflictedChanges}" SelectedItem="{Binding SelectedConflictedChange}"
+                         MaxHeight="200">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="entities:FileChange">
+                            <Grid ColumnDefinitions="18,*,Auto" Background="Transparent" ToolTip.Tip="Click to resolve in the merge tool">
+                                <TextBlock Grid.Column="0" Text="C" FontWeight="Bold" FontSize="11" Foreground="#D9413D" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12" VerticalAlignment="Center"
+                                           TextTrimming="LeadingCharacterEllipsis" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2">
+                                    <Button Classes="row-action" Content="Current" ToolTip.Tip="Keep the current branch's version"
+                                            Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).TakeCurrentCommand}" CommandParameter="{Binding}" />
+                                    <Button Classes="row-action" Content="Incoming" ToolTip.Tip="Take the incoming branch's version"
+                                            Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).TakeIncomingCommand}" CommandParameter="{Binding}" />
+                                    <Button Classes="row-action" Content="Resolved" ToolTip.Tip="Mark resolved as the file is now"
+                                            Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).MarkResolvedCommand}" CommandParameter="{Binding}" />
+                                    <Button Classes="row-action" Content="↗" ToolTip.Tip="Resolve in the external merge tool (git mergetool)"
+                                            Command="{Binding #StagingRoot.((vm:StagingViewModel)DataContext).OpenExternalMergeToolCommand}" CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </StackPanel>
+
+        <Border Grid.Row="1" Classes="section-header">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding UnstagedChanges.Count, StringFormat='Unstaged Files ({0})'}" />
+                <Button Grid.Column="1" Content="Stage all changes" Command="{Binding StageAllCommand}" />
+            </Grid>
+        </Border>
+        <ListBox Grid.Row="2" Classes="file-list" ItemsSource="{Binding UnstagedRows}"
+                 SelectedItem="{Binding SelectedUnstagedRow}" ItemTemplate="{StaticResource FileChangeTemplate}" />
+
+        <Border Grid.Row="3" Classes="section-header">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding StagedChanges.Count, StringFormat='Staged Files ({0})'}" />
+                <Button Grid.Column="1" Content="Unstage all changes" Command="{Binding UnstageAllCommand}" />
+            </Grid>
+        </Border>
+        <ListBox Grid.Row="4" Classes="file-list" ItemsSource="{Binding StagedRows}"
+                 SelectedItem="{Binding SelectedStagedRow}" ItemTemplate="{StaticResource FileChangeTemplate}" />
+
+        <Border Grid.Row="5" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,1,0,0" Padding="8">
+            <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Commit Message" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <CheckBox Grid.Column="1" Content="Amend" IsChecked="{Binding IsAmend}" FontSize="12" MinHeight="0"
+                              ToolTip.Tip="Amend previous commit: replace HEAD with the staged changes and this message" />
+                </Grid>
+                <Panel>
+                    <TextBox Name="SummaryBox" Text="{Binding CommitSummary}" PlaceholderText="Summary" MaxLength="200" Padding="6,6,34,6" />
+                    <TextBlock Text="{Binding SummaryCharactersLeft}" FontSize="11" Margin="0,0,8,0" IsHitTestVisible="False"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                </Panel>
+                <TextBox Text="{Binding CommitDescription}" PlaceholderText="Description" AcceptsReturn="True"
+                         TextWrapping="Wrap" Height="70" />
+                <CheckBox Content="Skip Git hooks" IsChecked="{Binding SkipHooks}" FontSize="12" MinHeight="0"
+                          ToolTip.Tip="Commit with --no-verify: pre-commit and commit-msg hooks do not run" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <Button Content="{Binding CommitButtonLabel}" Command="{Binding CommitCommand}" ToolTip.Tip="Commit (Ctrl+Enter)"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
+                    <Button Grid.Column="1" Content="&amp; Push" Command="{Binding CommitAndPushCommand}" Margin="4,0,0,0"
+                            ToolTip.Tip="Commit, then push the branch" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

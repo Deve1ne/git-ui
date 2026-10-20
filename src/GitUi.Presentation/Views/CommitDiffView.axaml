@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:views="clr-namespace:GitUi.Presentation.Views"
+             x:Class="GitUi.Presentation.Views.CommitDiffView"
+             x:DataType="vm:CommitDetailsViewModel"
+             Background="{DynamicResource AppBackgroundBrush}">
+    <!-- Read-only diff of one file of the selected commit, shown in place of the graph. -->
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="panel-header" Height="32">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                <TextBlock Grid.Column="0" Margin="0,0,8,0" Text="{Binding HeaderText}" />
+                <TextBlock Grid.Column="1" Text="{Binding SelectedFile.Path, FallbackValue=''}"
+                           TextTrimming="LeadingCharacterEllipsis" Foreground="{DynamicResource TextNormalBrush}" />
+                <views:DiffOptionsBar Grid.Column="2" DataContext="{Binding Diff.Settings}" Margin="0,0,4,0" />
+                <Button Grid.Column="3" Content="↗" Command="{Binding OpenExternalDiffCommand}" ToolTip.Tip="Open in the external diff tool (git difftool)"
+                        Background="Transparent" BorderThickness="0" Padding="8,0" VerticalAlignment="Stretch" />
+                <Button Grid.Column="4" Content="✕" Command="{Binding CloseDiffCommand}" ToolTip.Tip="Close diff (back to graph)"
+                        Background="Transparent" BorderThickness="0" Padding="8,0" VerticalAlignment="Stretch" />
+            </Grid>
+        </Border>
+        <views:DiffBody DataContext="{Binding Diff}" />
+    </DockPanel>
+</UserControl>

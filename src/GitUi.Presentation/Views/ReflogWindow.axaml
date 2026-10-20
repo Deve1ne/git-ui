@@ -1,0 +1,56 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+        x:Class="GitUi.Presentation.Views.ReflogWindow"
+        x:DataType="vm:ReflogViewModel"
+        x:Name="ReflogRoot"
+        Title="Reflog" Width="860" Height="560" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PanelBackgroundBrush}">
+    <!-- Every move of HEAD, newest first: right-click an entry to get it back. -->
+    <DockPanel Margin="14">
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
+            <TextBlock Text="Where HEAD has been — commits, checkouts, resets, rebases — including commits no branch reaches any more."
+                       FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding Filter}" PlaceholderText="Filter by message or SHA" />
+                <TextBlock Grid.Column="1" Text="{Binding Summary}" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+            </Grid>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <TextBlock Text="Double-click shows the commit; right-click for branch / checkout / reset." VerticalAlignment="Center" FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <Button Name="CloseButton" Content="Close" IsCancel="True" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" Name="ReflogList">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ReflogRow">
+                    <Grid ColumnDefinitions="130,90,80,70,*" Background="Transparent">
+                        <Grid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Show this commit" Command="{Binding #ReflogRoot.((vm:ReflogViewModel)DataContext).ShowCommitCommand}" CommandParameter="{Binding}" />
+                                <MenuItem Header="Create branch here…" Command="{Binding #ReflogRoot.((vm:ReflogViewModel)DataContext).CreateBranchCommand}" CommandParameter="{Binding}" />
+                                <MenuItem Header="Checkout this commit (detached)" Command="{Binding #ReflogRoot.((vm:ReflogViewModel)DataContext).CheckoutCommand}" CommandParameter="{Binding}" />
+                                <MenuItem Header="Reset the current branch here">
+                                    <MenuItem Header="Soft - keep all changes" Command="{Binding #ReflogRoot.((vm:ReflogViewModel)DataContext).ResetSoftCommand}" CommandParameter="{Binding}" />
+                                    <MenuItem Header="Mixed - keep working copy but reset index" Command="{Binding #ReflogRoot.((vm:ReflogViewModel)DataContext).ResetMixedCommand}" CommandParameter="{Binding}" />
+                                    <MenuItem Header="Hard - discard all changes" Command="{Binding #ReflogRoot.((vm:ReflogViewModel)DataContext).ResetHardCommand}" CommandParameter="{Binding}" />
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Header="Copy commit sha" Command="{Binding #ReflogRoot.((vm:ReflogViewModel)DataContext).CopyShaCommand}" CommandParameter="{Binding}" />
+                            </ContextMenu>
+                        </Grid.ContextMenu>
+                        <TextBlock Text="{Binding When}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Entry.Selector}" FontFamily="Consolas,Menlo,monospace" FontSize="12" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding Entry.Action}" FontSize="11" VerticalAlignment="Center" Foreground="#DE9B43"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{Binding Entry.ShortSha}" FontFamily="Consolas,Menlo,monospace" FontSize="12" VerticalAlignment="Center"
+                                   Foreground="#15A0BF" />
+                        <TextBlock Grid.Column="4" Text="{Binding Entry.Message}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                   ToolTip.Tip="{Binding Entry.Message}" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

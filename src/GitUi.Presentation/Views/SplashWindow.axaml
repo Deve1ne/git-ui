@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:GitUi.Presentation.Controls"
+        x:Class="GitUi.Presentation.Views.SplashWindow"
+        Title="Git UI" Icon="/Assets/gitui.ico"
+        Width="960" Height="610" CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        Background="{DynamicResource AppBackgroundBrush}">
+    <!-- Loading screen: native port of assets/branding/loading.html, shown at least 5 seconds. -->
+    <Border BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
+        <controls:SplashAnimation Name="Animation" />
+    </Border>
+</Window>

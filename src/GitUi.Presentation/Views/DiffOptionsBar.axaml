@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             x:Class="GitUi.Presentation.Views.DiffOptionsBar"
+             x:DataType="vm:DiffSettings">
+    <!-- Shared diff toggles shown in every diff header; they apply to all diffs at once. -->
+    <UserControl.Styles>
+        <Style Selector="ToggleButton.diff-option">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,1" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+    <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+        <ToggleButton Classes="diff-option" Content="Split" IsChecked="{Binding IsSplit}"
+                      ToolTip.Tip="Side-by-side view (hunk and line staging use the unified view)" />
+        <ToggleButton Classes="diff-option" Content="Ignore whitespace" IsChecked="{Binding IgnoreWhitespace}"
+                      ToolTip.Tip="Hide changes that only touch spaces, tabs or indentation" />
+    </StackPanel>
+</UserControl>

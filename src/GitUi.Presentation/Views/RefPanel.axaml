@@ -1,0 +1,373 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:conv="clr-namespace:GitUi.Presentation.Converters"
+             xmlns:entities="clr-namespace:GitUi.Domain.Entities;assembly=GitUi.Domain"
+             x:Class="GitUi.Presentation.Views.RefPanel"
+             x:DataType="vm:BranchViewModel"
+             x:Name="RefPanelRoot"
+             Background="{DynamicResource PanelBackgroundBrush}">
+    <UserControl.Resources>
+        <!-- Folder line (click to fold) or branch line: ✓ for HEAD, name, ↑/↓ counts, and on hover
+             the graph toggles GitKraken has — hide (eye) and solo. -->
+        <DataTemplate x:Key="RefRowTemplate" x:DataType="vm:RefRowViewModel">
+            <Panel Margin="{Binding Indent}" Opacity="{Binding Opacity}">
+                <Button Classes="ref-folder" IsVisible="{Binding IsFolder}"
+                        Command="{Binding #RefPanelRoot.((vm:BranchViewModel)DataContext).ToggleFolderCommand}" CommandParameter="{Binding}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding Chevron}" FontSize="10" Width="10" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
+                </Button>
+                <Grid IsVisible="{Binding IsBranch}" ColumnDefinitions="14,*,Auto,Auto" Background="Transparent">
+                    <TextBlock Grid.Column="0" Text="✓" IsVisible="{Binding IsHead}" FontSize="11" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                               FontWeight="{Binding Weight}"
+                               ToolTip.Tip="{Binding Branch.Name, FallbackValue=''}" />
+                    <!-- Commits ahead of / behind the upstream branch -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding AheadBy, StringFormat='↑{0}'}" FontSize="11"
+                                   IsVisible="{Binding AheadBy, Converter={x:Static conv:IsPositiveConverter.Instance}}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" ToolTip.Tip="Commits not pushed yet" />
+                        <TextBlock Text="{Binding BehindBy, StringFormat='↓{0}'}" FontSize="11"
+                                   IsVisible="{Binding BehindBy, Converter={x:Static conv:IsPositiveConverter.Instance}}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" ToolTip.Tip="Commits to pull" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="0" Margin="4,0,0,0">
+                        <Button Classes="ref-toggle" Classes.active="{Binding IsSolo}" Content="◎" ToolTip.Tip="{Binding SoloTip}"
+                                Command="{Binding #RefPanelRoot.((vm:BranchViewModel)DataContext).ToggleSoloCommand}" CommandParameter="{Binding}" />
+                        <Button Classes="ref-toggle" Classes.active="{Binding IsHidden}" Content="{Binding HideGlyph}" ToolTip.Tip="{Binding HideTip}"
+                                Command="{Binding #RefPanelRoot.((vm:BranchViewModel)DataContext).ToggleHiddenCommand}" CommandParameter="{Binding}" />
+                    </StackPanel>
+                </Grid>
+            </Panel>
+        </DataTemplate>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="Button.ref-folder">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.section-add">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+        </Style>
+        <Style Selector="Button.ref-toggle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="3,0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover Button.ref-toggle">
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="Button.ref-toggle.active">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="Foreground" Value="#15A0BF" />
+        </Style>
+    </UserControl.Styles>
+    <DockPanel>
+        <!-- Branches and tags: right-click for actions, drag one onto another to merge / rebase / push. -->
+        <Border DockPanel.Dock="Top" Classes="panel-header">
+            <TextBlock Text="{Binding CurrentBranchName, StringFormat='Checked out: {0}', TargetNullValue='No repository', FallbackValue='No repository'}" />
+        </Border>
+        <!-- Branch / tag filter (Ctrl+Alt+F) -->
+        <Border DockPanel.Dock="Top" Padding="6,6,6,4" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Name="FilterBox" Text="{Binding FilterText}" PlaceholderText="Filter branches (Ctrl+Alt+F)" FontSize="12"
+                         MinHeight="26" Padding="6,3">
+                    <TextBox.InnerLeftContent>
+                        <PathIcon Data="{StaticResource IconSearch}" Width="12" Height="12" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </TextBox.InnerLeftContent>
+                    <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Escape" Command="{Binding ClearFilterCommand}" />
+                    </TextBox.KeyBindings>
+                </TextBox>
+                <Button Grid.Column="1" Content="✕" ToolTip.Tip="Clear filter" IsVisible="{Binding IsFiltering}" Command="{Binding ClearFilterCommand}"
+                        Background="Transparent" BorderThickness="0" Padding="6,0" Margin="2,0,0,0" />
+            </Grid>
+        </Border>
+        <!-- Hidden or soloed branches change what the graph shows: say so, with a way back -->
+        <Border DockPanel.Dock="Top" IsVisible="{Binding IsGraphFiltered}" Padding="8,4" Background="#2215A0BF"
+                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding GraphFilterSummary}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Show all" Command="{Binding ShowAllBranchesCommand}" FontSize="11" Padding="6,1" MinHeight="0" Margin="6,0,0,0" />
+            </Grid>
+        </Border>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <Expander Classes="ref-section" IsExpanded="True">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding LocalBranches.Count, StringFormat='LOCAL ({0})'}" Classes="section-title" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="section-add" Content="↺" Name="ReflogButton"
+                                    ToolTip.Tip="Reflog: everywhere HEAD has been, to get lost commits back" />
+                        </Grid>
+                    </Expander.Header>
+                    <ListBox Classes="ref-list" Name="LocalList" ItemsSource="{Binding LocalRows}" DoubleTapped="OnLocalBranchDoubleTapped"
+                             ItemTemplate="{StaticResource RefRowTemplate}" />
+                </Expander>
+
+                <Expander Classes="ref-section" IsExpanded="True">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding RemoteBranches.Count, StringFormat='REMOTE ({0})'}" Classes="section-title" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="section-add" Content="+" ToolTip.Tip="Add remote" Command="{Binding AddRemoteCommand}" />
+                        </Grid>
+                    </Expander.Header>
+                    <ListBox Classes="ref-list" Name="RemoteList" ItemsSource="{Binding RemoteRows}"
+                             ItemTemplate="{StaticResource RefRowTemplate}" />
+                </Expander>
+
+                <!-- Open pull requests (merge requests on GitLab) of the repository behind the remote. -->
+                <Expander Classes="ref-section" Name="PullRequestSection" x:DataType="vm:PullRequestsViewModel" IsExpanded="True"
+                          IsVisible="{Binding IsAvailable}">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <TextBlock Text="{Binding Header}" Classes="section-title" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="section-add" Content="⟳" ToolTip.Tip="Reload from the server" Command="{Binding RefreshCommand}" />
+                            <Button Grid.Column="2" Classes="section-add" Content="+" ToolTip.Tip="Create one from the checked-out branch" Command="{Binding CreateCommand}" />
+                        </Grid>
+                    </Expander.Header>
+                    <StackPanel>
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="2" MinHeight="2" Margin="8,0" />
+                        <TextBlock Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                   FontSize="11" TextWrapping="Wrap" Margin="12,2,8,4" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <Button Content="Connect an account…" IsVisible="{Binding NeedsAccount}" Command="{Binding ConnectAccountCommand}"
+                                FontSize="11" Padding="8,2" MinHeight="0" Margin="12,0,8,6" />
+                        <ListBox Classes="ref-list" Name="PullRequestList" ItemsSource="{Binding PullRequests}" DoubleTapped="OnPullRequestDoubleTapped">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PullRequestRow">
+                                    <Grid ColumnDefinitions="*,Auto" Background="Transparent" ToolTip.Tip="{Binding ToolTip}">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Open in the browser"
+                                                          Command="{Binding #PullRequestSection.((vm:PullRequestsViewModel)DataContext).OpenInBrowserCommand}" CommandParameter="{Binding}" />
+                                                <MenuItem Header="Check out its branch"
+                                                          Command="{Binding #PullRequestSection.((vm:PullRequestsViewModel)DataContext).CheckoutCommand}" CommandParameter="{Binding}" />
+                                                <MenuItem Header="Copy link"
+                                                          Command="{Binding #PullRequestSection.((vm:PullRequestsViewModel)DataContext).CopyLinkCommand}" CommandParameter="{Binding}" />
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Header}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Detail}" FontSize="10" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1" IsVisible="{Binding PullRequest.IsDraft}" Background="#33888888" CornerRadius="3"
+                                                Padding="4,0" Margin="6,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="draft" FontSize="10" />
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Git Flow: initialize, start feature / release / hotfix, finish the ones in progress. -->
+                <Expander Classes="ref-section" Name="GitFlowSection" x:DataType="vm:GitFlowViewModel" IsExpanded="{Binding IsInitialized, Mode=OneWay}">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding Header}" Classes="section-title" VerticalAlignment="Center" ToolTip.Tip="{Binding ConfigSummary}" />
+                            <Button Grid.Column="1" Classes="section-add" Content="+" ToolTip.Tip="Start a feature, release or hotfix" IsVisible="{Binding IsInitialized}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="Bottom">
+                                        <MenuItem Header="Start feature…" Command="{Binding StartFeatureCommand}" />
+                                        <MenuItem Header="Start release…" Command="{Binding StartReleaseCommand}" />
+                                        <MenuItem Header="Start hotfix…" Command="{Binding StartHotfixCommand}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+                    </Expander.Header>
+                    <StackPanel>
+                        <StackPanel IsVisible="{Binding !IsInitialized}" Margin="12,2,8,6" Spacing="4">
+                            <TextBlock Text="Feature, release and hotfix branches with their merges and tags done for you." FontSize="11" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <Button Content="Initialize Git Flow…" Command="{Binding InitializeCommand}" FontSize="11" Padding="8,2" MinHeight="0" />
+                        </StackPanel>
+                        <TextBlock Text="No feature, release or hotfix in progress." FontSize="11" Margin="12,2,8,4" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   IsVisible="{Binding ShowEmpty}" />
+                        <ListBox Classes="ref-list" ItemsSource="{Binding Branches}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GitFlowBranchRow">
+                                    <Grid ColumnDefinitions="14,Auto,*,Auto" Background="Transparent" ToolTip.Tip="{Binding Branch.Branch}">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="{Binding FinishLabel}"
+                                                          Command="{Binding #GitFlowSection.((vm:GitFlowViewModel)DataContext).FinishCommand}" CommandParameter="{Binding}" />
+                                                <MenuItem Header="Checkout"
+                                                          Command="{Binding #GitFlowSection.((vm:GitFlowViewModel)DataContext).CheckoutCommand}" CommandParameter="{Binding}" />
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                        <TextBlock Text="✓" IsVisible="{Binding IsHead}" FontSize="11" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Kind}" FontSize="10" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#DE9B43" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Branch.Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <Button Grid.Column="3" Classes="section-add" Content="Finish" FontSize="10" ToolTip.Tip="{Binding FinishLabel}"
+                                                Command="{Binding #GitFlowSection.((vm:GitFlowViewModel)DataContext).FinishCommand}" CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Git LFS (when git-lfs is installed): tracked patterns, pull / fetch / prune. -->
+                <Expander Classes="ref-section" Name="LfsSection" x:DataType="vm:LfsViewModel" IsVisible="{Binding IsAvailable}"
+                          IsExpanded="{Binding IsUsed, Mode=OneWay}">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <TextBlock Text="{Binding Header}" Classes="section-title" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="section-add" Content="⋯" ToolTip.Tip="LFS actions">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="Bottom">
+                                        <MenuItem Header="Pull LFS files" Command="{Binding PullCommand}" />
+                                        <MenuItem Header="Fetch LFS files" Command="{Binding FetchCommand}" />
+                                        <MenuItem Header="Prune old local LFS files" Command="{Binding PruneCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Install LFS hooks in this repository" Command="{Binding InstallCommand}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                            <Button Grid.Column="2" Classes="section-add" Content="+" ToolTip.Tip="Track a file pattern with LFS" Command="{Binding TrackCommand}" />
+                        </Grid>
+                    </Expander.Header>
+                    <StackPanel>
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="2" MinHeight="2" Margin="8,0" />
+                        <TextBlock Text="No pattern tracked: + stores matching files (e.g. *.psd) in LFS." IsVisible="{Binding !IsUsed}" FontSize="11"
+                                   TextWrapping="Wrap" Margin="12,2,8,4" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding FileSummary}" IsVisible="{Binding FileSummary, Converter={x:Static ObjectConverters.IsNotNull}}" FontSize="11"
+                                   Margin="12,0,8,2" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <ListBox Classes="ref-list" ItemsSource="{Binding Patterns}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Grid ColumnDefinitions="*,Auto" Background="Transparent">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Untrack" Command="{Binding #LfsSection.((vm:LfsViewModel)DataContext).UntrackCommand}" CommandParameter="{Binding}" />
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                        <TextBlock Text="{Binding}" FontFamily="Consolas,Menlo,monospace" FontSize="12" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Classes="ref-section" Name="StashSection" x:DataType="vm:StashViewModel" IsExpanded="True"
+                          Header="{Binding Stashes.Count, StringFormat='STASHES ({0})'}">
+                    <ListBox Classes="ref-list" ItemsSource="{Binding Stashes}" SelectedItem="{Binding SelectedStash}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="entities:GitStash">
+                                <TextBlock Text="{Binding Message}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                           ToolTip.Tip="{Binding Message}" Background="Transparent">
+                                    <TextBlock.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Apply"
+                                                      Command="{Binding $parent[ListBox].((vm:StashViewModel)DataContext).ApplyCommand}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="Pop"
+                                                      Command="{Binding $parent[ListBox].((vm:StashViewModel)DataContext).PopCommand}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="Drop"
+                                                      Command="{Binding $parent[ListBox].((vm:StashViewModel)DataContext).DropCommand}"
+                                                      CommandParameter="{Binding}" />
+                                        </ContextMenu>
+                                    </TextBlock.ContextMenu>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+
+                <Expander Classes="ref-section" IsExpanded="True" IsVisible="{Binding HasSubmodules}">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding Submodules.Count, StringFormat='SUBMODULES ({0})'}" Classes="section-title" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="section-add" Content="⟳" ToolTip.Tip="Update all submodules (init, recursive)"
+                                    Command="{Binding UpdateSubmodulesCommand}" />
+                        </Grid>
+                    </Expander.Header>
+                    <ListBox Classes="ref-list" ItemsSource="{Binding Submodules}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="entities:GitSubmodule">
+                                <Grid ColumnDefinitions="*,Auto" Background="Transparent" ToolTip.Tip="{Binding Url}">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Open submodule"
+                                                      Command="{Binding #RefPanelRoot.((vm:BranchViewModel)DataContext).OpenSubmoduleCommand}" CommandParameter="{Binding}" />
+                                            <MenuItem Header="Update submodule"
+                                                      Command="{Binding #RefPanelRoot.((vm:BranchViewModel)DataContext).UpdateSubmoduleCommand}" CommandParameter="{Binding}" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+                                    <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="6,0,0,0">
+                                        <TextBlock Text="not initialized" FontSize="10" IsVisible="{Binding !IsInitialized}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Text="●" FontSize="10" Foreground="#DE9B43" IsVisible="{Binding IsModified}"
+                                                   ToolTip.Tip="Checked out at another commit than the one recorded" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+
+                <Expander Classes="ref-section" IsExpanded="True">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding Worktrees.Count, StringFormat='WORKTREES ({0})'}" Classes="section-title" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="section-add" Content="+" ToolTip.Tip="Add a worktree (a second working folder on another branch)"
+                                    Command="{Binding AddWorktreeCommand}" />
+                        </Grid>
+                    </Expander.Header>
+                    <ListBox Classes="ref-list" ItemsSource="{Binding Worktrees}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="entities:GitWorktree">
+                                <Grid ColumnDefinitions="*,Auto" Background="Transparent" ToolTip.Tip="{Binding Path}">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Open in a new tab"
+                                                      Command="{Binding #RefPanelRoot.((vm:BranchViewModel)DataContext).OpenWorktreeCommand}" CommandParameter="{Binding}" />
+                                            <MenuItem Header="Remove worktree" IsVisible="{Binding !IsMain}"
+                                                      Command="{Binding #RefPanelRoot.((vm:BranchViewModel)DataContext).RemoveWorktreeCommand}" CommandParameter="{Binding}" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+                                    <TextBlock Text="{Binding Branch, TargetNullValue='(detached)'}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="main" FontSize="10" IsVisible="{Binding IsMain}" Margin="6,0,0,0"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+
+                <Expander Classes="ref-section" Name="TagsSection" IsExpanded="False"
+                          Header="{Binding Tags.Count, StringFormat='TAGS ({0})'}">
+                    <ListBox Classes="ref-list" Name="TagList" ItemsSource="{Binding Tags}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="entities:GitTag">
+                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                           ToolTip.Tip="{Binding Name}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

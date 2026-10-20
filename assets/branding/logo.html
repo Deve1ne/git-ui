@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git UI Logo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Pruning-shears mark: line art inspired by "Minimalist Pruning Shears Icon".
+     The pivot is a commit node and the falling twig is a pruned git branch. */
+  :root {
+    --page: #f4f4f2;
+    --text: #111;
+    --muted: #6b6b6b;
+    --card-light: #ffffff;
+    --card-dark: #1c1e23;
+    --accent: #15a0bf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --page: #121418; --text: #eee; --muted: #9a9a9a; }
+  }
+  :root[data-theme="dark"] { --page: #121418; --text: #eee; --muted: #9a9a9a; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px 48px;
+    background: var(--page);
+    color: var(--text);
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.lead { margin: 0 0 28px; color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card {
+    border-radius: 14px;
+    padding: 28px 24px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    min-height: 260px;
+  }
+  .card.light { background: var(--card-light); color: #111; --logo-paper: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .card.dark  { background: var(--card-dark);  color: #f2f2f2; --logo-paper: #1c1e23; }
+  .card .caption { font-size: 12px; opacity: .6; }
+
+  .mark { width: 168px; height: 168px; }
+
+  /* Horizontal lockup: mark + wordmark */
+  .lockup { display: flex; align-items: center; gap: 14px; }
+  .lockup svg { width: 72px; height: 72px; }
+  .wordmark { display: flex; flex-direction: column; line-height: 1; }
+  .wordmark b { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+  .wordmark b span { color: var(--accent); }
+  .wordmark small { font-family: "Patrick Hand", "Segoe Print", cursive; font-size: 17px; opacity: .7; margin-top: 4px; }
+
+  .sizes { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; justify-content: center; }
+  .sizes div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; opacity: .8; }
+
+  /* App-icon tile */
+  .tile {
+    width: 132px; height: 132px; border-radius: 30px;
+    background: linear-gradient(145deg, #1c1e23, #2a2e37);
+    display: grid; place-items: center;
+    color: #f2f2f2; --logo-paper: #1c1e23;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.06);
+  }
+  .tile svg { width: 104px; height: 104px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="gitui-mark" viewBox="0 0 512 512">
+    <g transform="translate(-34 4)">
+      <g stroke="currentColor" stroke-width="14" stroke-linejoin="round" stroke-linecap="round" fill="var(--logo-paper, #fff)">
+        <path d="M 262 236 C 236 236 214 250 206 270 C 186 316 150 362 108 414 C 90 436 104 466 130 456 C 178 420 224 366 252 316 C 264 294 276 276 292 266 Z" />
+        <path d="M 316 262 C 330 280 332 300 320 322 C 302 360 290 404 280 446 C 274 474 302 484 312 458 C 330 410 352 362 362 318 C 368 290 360 268 344 254 Z" />
+        <path d="M 264 292 L 300 312" stroke-width="22" fill="none" />
+        <path d="M 272 216 C 262 150 300 80 390 46 C 404 40 412 52 404 64 C 372 110 350 160 334 214 Z" />
+        <path d="M 318 254 C 360 236 408 206 454 170 C 466 162 478 172 470 184 C 446 232 400 262 340 272 Z" />
+        <circle cx="304" cy="232" r="34" />
+        <circle cx="304" cy="232" r="13" fill="currentColor" stroke="none" />
+      </g>
+      <g transform="translate(18 -34) rotate(-18 432 360)" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M 392 318 L 432 360 L 470 344" />
+        <path d="M 432 360 L 440 410" />
+        <path d="M 384 306 L 396 322" stroke-dasharray="2 14" />
+        <circle cx="470" cy="344" r="13" fill="var(--logo-paper, #fff)" />
+        <circle cx="440" cy="410" r="13" fill="var(--logo-paper, #fff)" />
+      </g>
+    </g>
+  </symbol>
+</svg>
+
+<main>
+  <h1>Git UI — logo</h1>
+  <p class="lead">Pruning shears in line art: the pivot is a commit, the falling twig is a pruned branch.</p>
+
+  <div class="grid">
+    <div class="card light">
+      <svg class="mark" role="img" aria-label="Git UI mark"><use href="#gitui-mark" /></svg>
+      <span class="caption">Mark — light</span>
+    </div>
+    <div class="card dark">
+      <svg class="mark" role="img" aria-label="Git UI mark"><use href="#gitui-mark" /></svg>
+      <span class="caption">Mark — dark</span>
+    </div>
+    <div class="card dark">
+      <div class="tile"><svg role="img" aria-label="Git UI app icon"><use href="#gitui-mark" /></svg></div>
+      <span class="caption">App icon tile</span>
+    </div>
+    <div class="card light">
+      <div class="lockup">
+        <svg role="img" aria-label="Git UI"><use href="#gitui-mark" /></svg>
+        <div class="wordmark"><b>Git<span>UI</span></b><small>untangle your branches</small></div>
+      </div>
+      <span class="caption">Lockup — light</span>
+    </div>
+    <div class="card dark">
+      <div class="lockup">
+        <svg role="img" aria-label="Git UI"><use href="#gitui-mark" /></svg>
+        <div class="wordmark"><b>Git<span>UI</span></b><small>untangle your branches</small></div>
+      </div>
+      <span class="caption">Lockup — dark</span>
+    </div>
+    <div class="card light">
+      <div class="sizes">
+        <div><svg width="16" height="16"><use href="#gitui-mark" /></svg>16</div>
+        <div><svg width="24" height="24"><use href="#gitui-mark" /></svg>24</div>
+        <div><svg width="32" height="32"><use href="#gitui-mark" /></svg>32</div>
+        <div><svg width="48" height="48"><use href="#gitui-mark" /></svg>48</div>
+        <div><svg width="64" height="64"><use href="#gitui-mark" /></svg>64</div>
+      </div>
+      <span class="caption">Small sizes</span>
+    </div>
+  </div>
+</main>
+</body>
+</html>

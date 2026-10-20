@@ -1,0 +1,11 @@
+#!/bin/sh
+# Removes the desktop launchers postinst created.
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    if [ -f /var/lib/gitui/desktop-launchers ]; then
+        while IFS= read -r launcher; do
+            rm -f "$launcher"
+        done < /var/lib/gitui/desktop-launchers
+    fi
+    rm -rf /var/lib/gitui
+fi
+exit 0

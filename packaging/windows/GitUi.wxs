@@ -1,0 +1,32 @@
+<!-- Per-user MSI: installs to %LocalAppData%\Programs\GitUi without administrator rights.
+     Built by packaging/package.py, which passes Version, PublishDir and IconFile. -->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Git UI" Manufacturer="Git UI" Version="$(Version)"
+           UpgradeCode="a5bbcd08-2555-4a84-95fb-3b959c296b16" Scope="perUser" Compressed="yes">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Git UI is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="gitui.ico" SourceFile="$(IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="gitui.ico" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="GitUi" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main">
+      <Files Directory="INSTALLFOLDER" Include="$(PublishDir)\**" />
+
+      <Component Id="Shortcuts" Directory="ProgramMenuFolder">
+        <Shortcut Id="StartMenuShortcut" Name="Git UI" Target="[INSTALLFOLDER]GitUi.Presentation.exe"
+                  WorkingDirectory="INSTALLFOLDER" Icon="gitui.ico" />
+        <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="Git UI"
+                  Target="[INSTALLFOLDER]GitUi.Presentation.exe" WorkingDirectory="INSTALLFOLDER" Icon="gitui.ico" />
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RemoveFolder Id="RemoveProgramsFolder" Directory="ProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\GitUi" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

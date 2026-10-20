@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:hosting="clr-namespace:GitUi.Application.Hosting;assembly=GitUi.Application"
+             x:Class="GitUi.Presentation.Views.HomeView"
+             x:DataType="vm:HomeViewModel"
+             x:Name="HomeRoot"
+             Background="{DynamicResource AppBackgroundBrush}">
+    <!-- New-tab page: Open (browse + recently opened) / Clone / Init. -->
+    <UserControl.Styles>
+        <Style Selector="Button.section">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource TextNormalBrush}" />
+        </Style>
+        <Style Selector="Button.section.active">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+        </Style>
+        <Style Selector="TextBlock.form-title">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,10,0,4" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="ListBox.recent ListBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="240,*">
+        <!-- Sections -->
+        <Border Grid.Column="0" Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Bottom" Classes="section" Content="← Back to repository" Margin="0,0,0,8"
+                        IsVisible="{Binding #HomeRoot.((vm:MainWindowViewModel)Tag).CanCloseHome, FallbackValue=False}"
+                        Command="{Binding #HomeRoot.((vm:MainWindowViewModel)Tag).CloseHomeCommand, FallbackValue={x:Null}}" />
+                <StackPanel Margin="0,16,0,0">
+                    <TextBlock Text="REPOSITORIES" FontSize="11" FontWeight="SemiBold" Margin="14,0,0,8"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <Button Classes="section" Classes.active="{Binding IsOpenSection}"
+                            Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static vm:HomeSection.Open}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconFolder}" Width="13" Height="13" VerticalAlignment="Center" />
+                            <TextBlock Text="Open a repository" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="section" Classes.active="{Binding IsCloneSection}" Content="⇣  Clone a repository"
+                            Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static vm:HomeSection.Clone}" />
+                    <Button Classes="section" Classes.active="{Binding IsInitSection}" Content="✚  Initialize a repository"
+                            Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static vm:HomeSection.Init}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <ScrollViewer Grid.Column="1">
+            <StackPanel Margin="40,28" MaxWidth="720" HorizontalAlignment="Left">
+
+                <!-- Open -->
+                <StackPanel IsVisible="{Binding IsOpenSection}">
+                    <TextBlock Classes="form-title" Text="Open a repository" />
+                    <Button Content="Browse for a repository…" Command="{Binding BrowseAndOpenCommand}" Classes="accent" Padding="16,6" />
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,24,0,8">
+                        <TextBlock Text="Recently opened" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1" Width="260" Text="{Binding RecentFilter}" PlaceholderText="Filter repos by name" />
+                    </Grid>
+                    <ListBox Classes="recent" ItemsSource="{Binding RecentRepositories}" Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RecentRepositoryItem">
+                                <Grid ColumnDefinitions="*,Auto,Auto" Background="Transparent" Tapped="OnRecentTapped">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Path}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   TextTrimming="LeadingCharacterEllipsis" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="11" VerticalAlignment="Center" Margin="12,0"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <Button Grid.Column="2" Content="✕" ToolTip.Tip="Remove from recent" Background="Transparent" BorderThickness="0"
+                                            Command="{Binding #HomeRoot.((vm:HomeViewModel)DataContext).RemoveRecentCommand}" CommandParameter="{Binding}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+
+                <!-- Clone -->
+                <StackPanel IsVisible="{Binding IsCloneSection}">
+                    <TextBlock Classes="form-title" Text="Clone a repository" />
+
+                    <!-- From a connected account: pick one of its repositories to fill the URL. -->
+                    <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                            CornerRadius="4" Padding="12" Margin="0,0,0,8">
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="From an account" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Content="Accounts…" Command="{Binding ConnectAccountCommand}" FontSize="11" Padding="8,2" MinHeight="0" />
+                            </Grid>
+                            <TextBlock Text="Connect a GitHub, GitLab, Azure DevOps or Bitbucket account to pick one of its repositories."
+                                       IsVisible="{Binding !HasCloneAccounts}" FontSize="12" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <Grid ColumnDefinitions="260,8,*" IsVisible="{Binding HasCloneAccounts}">
+                                <ComboBox ItemsSource="{Binding CloneAccounts}" SelectedItem="{Binding SelectedCloneAccount}" HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:AccountRow">
+                                            <TextBlock Text="{Binding ProviderName, StringFormat='{}{0}: '}"><Run Text="{Binding Account.Label}" /></TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBox Grid.Column="2" Text="{Binding AccountRepositoryFilter}" PlaceholderText="Filter repositories" />
+                            </Grid>
+                            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingAccountRepositories}" />
+                            <TextBlock Text="{Binding AccountRepositoriesMessage}" FontSize="12" TextWrapping="Wrap"
+                                       IsVisible="{Binding AccountRepositoriesMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <ListBox ItemsSource="{Binding AccountRepositories}" SelectedItem="{Binding SelectedAccountRepository}" MaxHeight="220"
+                                     IsVisible="{Binding HasCloneAccounts}" Background="Transparent">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="hosting:HostedRepository">
+                                        <Grid ColumnDefinitions="*,Auto" ToolTip.Tip="{Binding Description}">
+                                            <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Text="private" IsVisible="{Binding IsPrivate}" FontSize="10" Margin="8,0,0,0"
+                                                       VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Classes="field-label" Text="URL" />
+                    <TextBox Text="{Binding CloneUrl}" PlaceholderText="https://github.com/org/repo.git  or  git@host:org/repo.git" />
+                    <TextBlock Classes="field-label" Text="Where to clone to" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Text="{Binding CloneParentDirectory}" />
+                        <Button Grid.Column="1" Content="Browse" Margin="6,0,0,0" Command="{Binding BrowseCloneDirectoryCommand}" />
+                    </Grid>
+                    <TextBlock Classes="field-label" Text="Folder name" />
+                    <TextBox Text="{Binding CloneFolderName}" />
+                    <TextBlock Classes="field-label" Text="Full path" />
+                    <TextBlock Text="{Binding CloneFullPath}" FontFamily="Consolas,monospace" FontSize="12" />
+
+                    <Expander Header="Options" Margin="0,14,0,0" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="field-label" Text="Branch to clone (default branch when empty)" />
+                            <TextBox Text="{Binding CloneBranch}" PlaceholderText="default branch" />
+                            <CheckBox Content="Shallow clone" IsChecked="{Binding ShallowClone}" Margin="0,8,0,0" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ShallowClone}">
+                                <TextBlock Text="Depth (commits)" VerticalAlignment="Center" />
+                                <NumericUpDown Value="{Binding CloneDepth}" Minimum="1" Maximum="100000" Increment="1" FormatString="0" Width="140" />
+                            </StackPanel>
+                            <CheckBox Content="Clone submodules (--recurse-submodules)" IsChecked="{Binding RecurseSubmodules}" />
+                        </StackPanel>
+                    </Expander>
+
+                    <Button Content="Clone the repo!" Command="{Binding CloneCommand}" Classes="accent" Padding="16,6" Margin="0,18,0,0" />
+                </StackPanel>
+
+                <!-- Init -->
+                <StackPanel IsVisible="{Binding IsInitSection}">
+                    <TextBlock Classes="form-title" Text="Initialize a repository" />
+                    <TextBlock Classes="field-label" Text="Name" />
+                    <TextBox Text="{Binding InitName}" PlaceholderText="my-project" />
+                    <TextBlock Classes="field-label" Text="Initialize in" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Text="{Binding InitParentDirectory}" />
+                        <Button Grid.Column="1" Content="Browse" Margin="6,0,0,0" Command="{Binding BrowseInitDirectoryCommand}" />
+                    </Grid>
+                    <TextBlock Classes="field-label" Text="Default branch name" />
+                    <TextBox Text="{Binding InitDefaultBranch}" Width="240" HorizontalAlignment="Left" />
+                    <TextBlock Classes="field-label" Text=".gitignore template (optional)" />
+                    <ComboBox ItemsSource="{Binding GitIgnoreTemplates}" SelectedItem="{Binding InitGitIgnoreTemplate}" Width="240" />
+                    <CheckBox Content="Create an initial commit (README.md)" IsChecked="{Binding InitCreateInitialCommit}" Margin="0,12,0,0" />
+                    <Button Content="Create Repository" Command="{Binding InitCommand}" Classes="accent" Padding="16,6" Margin="0,18,0,0" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,0" IsVisible="{Binding IsBusy}">
+                    <ProgressBar IsIndeterminate="True" Width="160" />
+                    <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding !IsBusy}" Margin="0,12,0,0"
+                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

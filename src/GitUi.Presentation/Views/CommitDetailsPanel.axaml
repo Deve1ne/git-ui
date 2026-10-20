@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:GitUi.Presentation.Converters"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:entities="clr-namespace:GitUi.Domain.Entities;assembly=GitUi.Domain"
+             x:Class="GitUi.Presentation.Views.CommitDetailsPanel"
+             x:DataType="vm:CommitDetailsViewModel"
+             x:Name="DetailsRoot"
+             Background="{DynamicResource PanelBackgroundBrush}">
+    <!-- Commit detail (right panel) for the commit selected in the graph. -->
+    <UserControl.Styles>
+        <Style Selector="ListBox.file-list">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.file-list ListBoxItem">
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="MinHeight" Value="24" />
+        </Style>
+        <Style Selector="ListBox.file-list ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverRowBrush}" />
+        </Style>
+        <Style Selector="ListBox.file-list ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+        </Style>
+        <Style Selector="TextBlock.meta">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontFamily" Value="Consolas,monospace" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#15A0BF" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="panel-header">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding HeaderText}" />
+                <Button Grid.Column="1" Content="✕" ToolTip.Tip="Back to the working directory" Command="{Binding CloseCommand}"
+                        Background="Transparent" BorderThickness="0" Padding="6,0" FontSize="11" />
+            </Grid>
+        </Border>
+
+        <StackPanel DockPanel.Dock="Top" Margin="10,8,10,6" Spacing="6">
+            <SelectableTextBlock Text="{Binding Details.Summary, FallbackValue=''}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <SelectableTextBlock Text="{Binding Details.Body, FallbackValue=''}" IsVisible="{Binding HasBody}" FontSize="12" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource TextNormalBrush}" MaxHeight="160" />
+            <TextBlock Classes="meta" Text="{Binding AuthorLine}" />
+            <TextBlock Classes="meta" Text="{Binding CommitterLine}" IsVisible="{Binding ShowCommitter}" />
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding SignatureText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="✓" Foreground="#5CB85C" FontWeight="Bold" IsVisible="{Binding IsSignatureVerified}" VerticalAlignment="Center" />
+                <TextBlock Text="⚠" Foreground="#DE9B43" IsVisible="{Binding !IsSignatureVerified}" VerticalAlignment="Center" />
+                <TextBlock Classes="meta" Text="{Binding SignatureText}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="meta" Text="commit" VerticalAlignment="Center" />
+                <Button Classes="link" Content="{Binding ShortSha}" Command="{Binding CopyShaCommand}" ToolTip.Tip="Copy the full SHA" />
+                <TextBlock Classes="meta" Text="parent" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <ItemsControl ItemsSource="{Binding ParentShortShas}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Button Classes="link" Content="{Binding}" ToolTip.Tip="Show this parent commit"
+                                    Command="{Binding #DetailsRoot.((vm:CommitDetailsViewModel)DataContext).ShowParentCommand}" CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+
+        <Border DockPanel.Dock="Top" Classes="section-header" Height="30" Padding="8,0"
+                Background="{DynamicResource PanelHeaderBackgroundBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding FilesSummary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <!-- GitKraken's Path / Tree switch, shared with the working-directory lists -->
+                <ToggleButton Grid.Column="1" Content="Tree" IsChecked="{Binding Diff.Settings.FilesAsTree}" FontSize="11" Padding="8,1" MinHeight="0"
+                              VerticalAlignment="Center" ToolTip.Tip="Show the files as a folder tree instead of full paths" />
+            </Grid>
+        </Border>
+
+        <ListBox Classes="file-list" ItemsSource="{Binding FileRows}" SelectedItem="{Binding SelectedFileRow}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:CommitFileRow">
+                    <Panel Margin="{Binding Indent}">
+                        <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsFolder}" Background="Transparent">
+                            <TextBlock Text="{Binding Chevron}" FontSize="10" Width="10" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <Grid ColumnDefinitions="18,*,Auto" Background="Transparent" IsVisible="{Binding IsFile}">
+                            <Grid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="File History" Command="{Binding #DetailsRoot.((vm:CommitDetailsViewModel)DataContext).ShowFileHistoryCommand}" CommandParameter="{Binding Item}" />
+                                    <MenuItem Header="File Blame" Command="{Binding #DetailsRoot.((vm:CommitDetailsViewModel)DataContext).ShowFileBlameCommand}" CommandParameter="{Binding Item}" />
+                                    <Separator />
+                                    <MenuItem Header="Checkout file (this version)" Command="{Binding #DetailsRoot.((vm:CommitDetailsViewModel)DataContext).RestoreFileCommand}" CommandParameter="{Binding Item}" />
+                                    <MenuItem Header="Show in folder" Command="{Binding #DetailsRoot.((vm:CommitDetailsViewModel)DataContext).RevealFileCommand}" CommandParameter="{Binding Item}" />
+                                    <MenuItem Header="Copy file path" Command="{Binding #DetailsRoot.((vm:CommitDetailsViewModel)DataContext).CopyFilePathCommand}" CommandParameter="{Binding Item}" />
+                                </ContextMenu>
+                            </Grid.ContextMenu>
+                            <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"
+                                       Text="{Binding Item.ChangeType, Converter={x:Static conv:FileChangeTypeToLetterConverter.Instance}, FallbackValue=''}"
+                                       Foreground="{Binding Item.ChangeType, Converter={x:Static conv:FileChangeTypeToBrushConverter.Instance}, FallbackValue={x:Null}}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" VerticalAlignment="Center"
+                                       TextTrimming="LeadingCharacterEllipsis" ToolTip.Tip="{Binding Item.Path, FallbackValue=''}" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Item.Additions, StringFormat='+{0}', FallbackValue=''}" FontSize="11" Foreground="#5CB85C" />
+                                <TextBlock Text="{Binding Item.Deletions, StringFormat='−{0}', FallbackValue=''}" FontSize="11" Foreground="#D9413D" />
+                            </StackPanel>
+                        </Grid>
+                    </Panel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

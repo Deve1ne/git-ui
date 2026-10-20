@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             x:Class="GitUi.Presentation.Views.CommandPaletteView"
+             x:DataType="vm:CommandPaletteViewModel">
+    <!-- Dimmed backdrop: clicking outside the palette closes it. -->
+    <Panel>
+        <Border Name="Backdrop" Background="#66000000" />
+        <Border Width="620" MaxHeight="460" Margin="0,70,0,0" VerticalAlignment="Top" HorizontalAlignment="Center"
+                CornerRadius="6" Padding="8" Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" BoxShadow="0 6 24 0 #88000000">
+            <DockPanel>
+                <TextBox Name="QueryBox" DockPanel.Dock="Top" Text="{Binding Query}" FontSize="14" Padding="8,6"
+                         PlaceholderText="Type a command, a branch to check out or a repository…">
+                    <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Down" Command="{Binding SelectNextCommand}" />
+                        <KeyBinding Gesture="Up" Command="{Binding SelectPreviousCommand}" />
+                        <KeyBinding Gesture="Enter" Command="{Binding ExecuteCommand}" />
+                        <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+                    </TextBox.KeyBindings>
+                </TextBox>
+                <ListBox Name="ResultList" ItemsSource="{Binding Results}" SelectedItem="{Binding Selected}" Margin="0,6,0,0"
+                         Background="Transparent">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="8,5" />
+                            <Setter Property="MinHeight" Value="0" />
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PaletteCommand">
+                            <Grid ColumnDefinitions="Auto,*,Auto" Background="Transparent">
+                                <TextBlock Text="{Binding Category}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Width="90" />
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding Shortcut}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="10,0,0,0" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </Panel>
+</UserControl>

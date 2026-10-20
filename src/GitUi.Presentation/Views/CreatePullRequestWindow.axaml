@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+        x:Class="GitUi.Presentation.Views.CreatePullRequestWindow"
+        x:DataType="vm:CreatePullRequestViewModel"
+        Title="{Binding WindowTitle}" Width="560" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PanelBackgroundBrush}">
+    <Window.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,8,0,3" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+    </Window.Styles>
+    <StackPanel Margin="18" Spacing="2">
+        <TextBlock Text="{Binding WindowTitle}" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Destination}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+        <Grid ColumnDefinitions="*,Auto,*" Margin="0,10,0,0">
+            <StackPanel>
+                <TextBlock Classes="label" Text="From" />
+                <TextBox Text="{Binding SourceBranch, Mode=OneWay}" IsReadOnly="True" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Text="→" FontSize="16" VerticalAlignment="Bottom" Margin="10,0,10,6" />
+            <StackPanel Grid.Column="2">
+                <TextBlock Classes="label" Text="Into" />
+                <ComboBox ItemsSource="{Binding TargetBranches}" SelectedItem="{Binding TargetBranch}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </Grid>
+        <TextBlock Text="{Binding PushNote}" IsVisible="{Binding PushNote, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   FontSize="11" Foreground="#DE9B43" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+        <TextBlock Classes="label" Text="Title" />
+        <TextBox Name="TitleBox" Text="{Binding Title}" />
+        <TextBlock Classes="label" Text="Description" />
+        <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" Height="120" />
+
+        <CheckBox Content="Draft" IsChecked="{Binding IsDraft}" Margin="0,8,0,0" />
+        <CheckBox Content="Open it in the browser afterwards" IsChecked="{Binding OpenAfterCreating}" />
+
+        <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Foreground="#E05561" TextWrapping="Wrap" Margin="0,6,0,0" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
+            <ProgressBar IsIndeterminate="True" Width="80" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" />
+            <Button Content="Create" Classes="accent" Command="{Binding CreateCommand}" IsDefault="True" />
+            <Button Name="CancelButton" Content="Cancel" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

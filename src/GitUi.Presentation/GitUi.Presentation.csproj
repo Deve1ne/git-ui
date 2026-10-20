@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Explorer / taskbar icon of the executable; windows use the same file through Window.Icon. -->
+    <ApplicationIcon>Assets\gitui.ico</ApplicationIcon>
+    <!-- Read by packaging/package.py for the installers' version. -->
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="SkiaSharp" Version="4.152.0" />
+    <!-- SkiaSharp brings the Windows and macOS natives at its version, but the Linux one would stay at
+         Avalonia's 3.119, which SkiaSharp 4.152 refuses at startup. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.152.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GitUi.Application\GitUi.Application.csproj" />
+    <ProjectReference Include="..\GitUi.Infrastructure\GitUi.Infrastructure.csproj" />
+    <ProjectReference Include="..\GitUi.Domain\GitUi.Domain.csproj" />
+  </ItemGroup>
+</Project>

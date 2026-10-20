@@ -1,0 +1,119 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+        x:Class="GitUi.Presentation.Views.PreferencesWindow"
+        x:DataType="vm:PreferencesViewModel"
+        x:Name="PreferencesRoot"
+        Title="Preferences" Width="600" SizeToContent="Height" MaxHeight="900" CanResize="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PanelBackgroundBrush}">
+    <Window.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,10,0,2" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Window.Styles>
+    <ScrollViewer>
+    <StackPanel Margin="18" Spacing="6">
+        <TextBlock Classes="section" Text="GIT IDENTITY" Margin="0,0,0,2" />
+        <TextBlock Classes="hint" Text="Global (all repositories) — name and email written into your commits." />
+        <Grid ColumnDefinitions="*,8,*">
+            <TextBox Text="{Binding GlobalName}" PlaceholderText="Name" />
+            <TextBox Grid.Column="2" Text="{Binding GlobalEmail}" PlaceholderText="Email" />
+        </Grid>
+        <TextBlock Classes="hint" Text="{Binding RepositoryLabel}" Margin="0,4,0,0" />
+        <Grid ColumnDefinitions="*,8,*" IsEnabled="{Binding HasRepository}">
+            <TextBox Text="{Binding RepositoryName}" PlaceholderText="Name (empty: use global)" />
+            <TextBox Grid.Column="2" Text="{Binding RepositoryEmail}" PlaceholderText="Email (empty: use global)" />
+        </Grid>
+
+        <TextBlock Classes="section" Text="GENERAL" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Auto-fetch every" VerticalAlignment="Center" />
+            <NumericUpDown Value="{Binding AutoFetchMinutes}" Minimum="0" Maximum="600" Increment="1" FormatString="0" Width="120" />
+            <TextBlock Text="minutes (0 = off)" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <TextBlock Classes="section" Text="ACCOUNTS" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="hint" Text="GitHub, GitLab, Azure DevOps and Bitbucket accounts, for pull requests and cloning your repositories." VerticalAlignment="Center" />
+            <Button Grid.Column="1" Name="AccountsButton" Content="Manage accounts…" Margin="8,0,0,0" />
+        </Grid>
+
+        <TextBlock Classes="section" Text="PROFILES" />
+        <TextBlock Classes="hint" Text="Named identities (work, personal…): switching one writes its name, email and signing key to the global git config. Saved at once." />
+        <ItemsControl ItemsSource="{Binding Profiles.Profiles}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProfileRow">
+                    <Grid ColumnDefinitions="18,*,Auto" Margin="0,2">
+                        <TextBlock Text="✓" IsVisible="{Binding IsActive}" Foreground="#5CB85C" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding Profile.Name}" FontWeight="SemiBold" />
+                            <TextBlock Classes="hint" Text="{Binding Detail}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Content="Use" FontSize="11" Padding="8,2" MinHeight="0" IsVisible="{Binding !IsActive}"
+                                    Command="{Binding #PreferencesRoot.((vm:PreferencesViewModel)DataContext).Profiles.ActivateCommand}" CommandParameter="{Binding}" />
+                            <Button Content="Edit" FontSize="11" Padding="8,2" MinHeight="0"
+                                    Command="{Binding #PreferencesRoot.((vm:PreferencesViewModel)DataContext).Profiles.EditCommand}" CommandParameter="{Binding}" />
+                            <Button Content="Delete" FontSize="11" Padding="8,2" MinHeight="0"
+                                    Command="{Binding #PreferencesRoot.((vm:PreferencesViewModel)DataContext).Profiles.DeleteCommand}" CommandParameter="{Binding}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Content="Add profile…" Command="{Binding Profiles.NewCommand}" IsVisible="{Binding !Profiles.IsEditing}" HorizontalAlignment="Left" />
+        <Border IsVisible="{Binding Profiles.IsEditing}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Profiles.EditTitle}" FontWeight="SemiBold" />
+                <TextBox Text="{Binding Profiles.EditName}" PlaceholderText="Profile name (e.g. Work)" />
+                <Grid ColumnDefinitions="*,8,*">
+                    <TextBox Text="{Binding Profiles.EditUserName}" PlaceholderText="Name in commits" />
+                    <TextBox Grid.Column="2" Text="{Binding Profiles.EditEmail}" PlaceholderText="Email in commits" />
+                </Grid>
+                <TextBox Text="{Binding Profiles.EditSigningKey}" PlaceholderText="Signing key (optional): GPG key id or SSH public key path" />
+                <CheckBox Content="Sign commits with this key" IsChecked="{Binding Profiles.EditSignCommits}" />
+                <TextBlock Text="{Binding Profiles.ErrorMessage}" Foreground="#E05561" TextWrapping="Wrap"
+                           IsVisible="{Binding Profiles.ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                    <Button Content="Save profile" Classes="accent" Command="{Binding Profiles.SaveProfileCommand}" />
+                    <Button Content="Cancel" Command="{Binding Profiles.CancelEditCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Classes="section" Text="COMMIT SIGNING" />
+        <TextBlock Classes="hint" Text="Global: signs every commit (and tag) git makes, here and on the command line." />
+        <WrapPanel>
+            <CheckBox Content="Sign commits" IsChecked="{Binding SignCommits}" Margin="0,0,16,0" />
+            <CheckBox Content="Sign tags" IsChecked="{Binding SignTags}" />
+        </WrapPanel>
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <ComboBox ItemsSource="{Binding SigningFormats}" SelectedItem="{Binding SigningFormat}" Width="110" />
+            <TextBox Grid.Column="1" Text="{Binding SigningKey}" Margin="8,0" PlaceholderText="Signing key" />
+            <Button Grid.Column="2" Content="Use my SSH key" Command="{Binding UseSshKeyCommand}" />
+        </Grid>
+        <TextBlock Classes="hint" Text="{Binding SigningKeyHint}" />
+
+        <TextBlock Classes="section" Text="GRAPH COLUMNS" />
+        <TextBlock Classes="hint" Text="Also available by right-clicking the graph's column header." />
+        <WrapPanel>
+            <CheckBox Content="Branch / tag" IsChecked="{Binding ShowRefsColumn}" Margin="0,0,16,0" />
+            <CheckBox Content="Author" IsChecked="{Binding ShowAuthorColumn}" Margin="0,0,16,0" />
+            <CheckBox Content="Date / time" IsChecked="{Binding ShowDateColumn}" Margin="0,0,16,0" />
+            <CheckBox Content="SHA" IsChecked="{Binding ShowShaColumn}" />
+        </WrapPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
+            <Button Name="CancelButton" Content="Cancel" IsCancel="True" />
+            <Button Name="SaveButton" Content="Save" Classes="accent" IsDefault="True" />
+        </StackPanel>
+    </StackPanel>
+    </ScrollViewer>
+</Window>

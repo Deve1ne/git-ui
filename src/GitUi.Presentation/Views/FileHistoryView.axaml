@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:GitUi.Presentation.Converters"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:views="clr-namespace:GitUi.Presentation.Views"
+             xmlns:entities="clr-namespace:GitUi.Domain.Entities;assembly=GitUi.Domain"
+             x:Class="GitUi.Presentation.Views.FileHistoryView"
+             x:DataType="vm:FileHistoryViewModel"
+             x:Name="FileHistoryRoot"
+             Background="{DynamicResource AppBackgroundBrush}">
+    <!-- File history / blame, shown in place of the graph (GitKraken's file view). -->
+    <UserControl.Styles>
+        <Style Selector="ListBox.plain">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.plain ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="ListBox.plain ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+        </Style>
+        <Style Selector="ListBox.plain ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverRowBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.mode">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="10,1" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="panel-header" Height="32">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding Title}" Margin="0,0,8,0" />
+                <TextBlock Grid.Column="1" Text="{Binding FilePath, FallbackValue=''}" TextTrimming="LeadingCharacterEllipsis"
+                           Foreground="{DynamicResource TextNormalBrush}" />
+                <views:DiffOptionsBar Grid.Column="2" DataContext="{Binding Diff.Settings}" IsVisible="{Binding #FileHistoryRoot.((vm:FileHistoryViewModel)DataContext).IsHistoryMode}" Margin="0,0,8,0" />
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <ToggleButton Classes="mode" Content="History" IsChecked="{Binding IsHistoryMode, Mode=OneWay}" Command="{Binding ShowHistoryCommand}" />
+                    <ToggleButton Classes="mode" Content="Blame" IsChecked="{Binding IsBlameMode, Mode=OneWay}" Command="{Binding ShowBlameCommand}" />
+                </StackPanel>
+                <Button Grid.Column="4" Content="✕" Command="{Binding CloseCommand}" ToolTip.Tip="Close (back to graph)"
+                        Background="Transparent" BorderThickness="0" Padding="8,0" Margin="4,0,0,0" VerticalAlignment="Stretch" />
+            </Grid>
+        </Border>
+
+        <Panel>
+            <!-- History: the commits that changed the file, and the selected one's diff -->
+            <Grid ColumnDefinitions="340,3,*" IsVisible="{Binding IsHistoryMode}">
+                <ListBox Classes="plain" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="entities:FileHistoryEntry">
+                            <StackPanel Margin="10,5" Spacing="2" Background="Transparent">
+                                <TextBlock Text="{Binding Commit.Message}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding Commit.Author}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <TextBlock Text="{Binding Commit.Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <TextBlock Text="{Binding Commit.Sha, Converter={x:Static conv:ShortShaConverter.Instance}}" FontSize="11"
+                                               FontFamily="Consolas,monospace" Foreground="#15A0BF" />
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <GridSplitter Grid.Column="1" Background="{DynamicResource PanelBorderBrush}" ResizeDirection="Columns" />
+                <views:DiffBody Grid.Column="2" DataContext="{Binding Diff}" />
+            </Grid>
+
+            <!-- Blame: who last changed each line; the annotation sits on the first line of each run -->
+            <ListBox Classes="plain" IsVisible="{Binding IsBlameMode}" ItemsSource="{Binding BlameLines}"
+                     FontFamily="Consolas,Menlo,monospace" FontSize="13" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="entities:BlameLine">
+                        <Grid ColumnDefinitions="300,48,*">
+                            <Border Grid.Column="0" Background="{DynamicResource PanelBackgroundBrush}" Padding="8,0"
+                                    BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,1,0">
+                                <Grid ColumnDefinitions="Auto,*,Auto" IsVisible="{Binding StartsHunk}" Background="Transparent"
+                                      ToolTip.Tip="{Binding Summary}">
+                                    <Button Grid.Column="0" Content="{Binding Sha, Converter={x:Static conv:ShortShaConverter.Instance}}"
+                                            Command="{Binding #FileHistoryRoot.((vm:FileHistoryViewModel)DataContext).ShowCommitCommand}"
+                                            CommandParameter="{Binding Sha}" ToolTip.Tip="Show this commit in the graph"
+                                            Background="Transparent" BorderThickness="0" Padding="0,0,8,0" MinHeight="0"
+                                            FontFamily="Consolas,monospace" FontSize="11" Foreground="#15A0BF" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Author}" FontFamily="Segoe UI,sans-serif" FontSize="11"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Date, StringFormat='{}{0:yyyy-MM-dd}'}" FontFamily="Segoe UI,sans-serif" FontSize="11"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                </Grid>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="{Binding LineNumber}" HorizontalAlignment="Right" Margin="0,0,8,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Content}" Foreground="{DynamicResource TextNormalBrush}" Margin="0,0,12,0" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Panel>
+    </DockPanel>
+</UserControl>

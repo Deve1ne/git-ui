@@ -1,0 +1,19 @@
+#!/bin/sh
+# The menu entry comes with the package (/usr/share/applications). This also puts a launcher on the
+# desktop of the user who ran the install (sudo apt install ...); postrm removes it again.
+if [ "$1" = "configure" ] && [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    home=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    desktop=$(su "$SUDO_USER" -s /bin/sh -c 'xdg-user-dir DESKTOP' 2>/dev/null)
+    if [ -z "$desktop" ] || [ "$desktop" = "$home" ]; then
+        desktop="$home/Desktop"
+    fi
+    if [ -d "$desktop" ]; then
+        launcher="$desktop/gitui.desktop"
+        install -m 755 -o "$SUDO_USER" -g "$(id -gn "$SUDO_USER")" /usr/share/applications/gitui.desktop "$launcher" || true
+        # GNOME only runs desktop launchers marked as trusted.
+        su "$SUDO_USER" -s /bin/sh -c "gio set '$launcher' metadata::trusted true" >/dev/null 2>&1 || true
+        mkdir -p /var/lib/gitui
+        grep -qxF "$launcher" /var/lib/gitui/desktop-launchers 2>/dev/null || echo "$launcher" >> /var/lib/gitui/desktop-launchers
+    fi
+fi
+exit 0

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Git UI
+Comment=Graphical Git client
+Exec=gitui
+Icon=gitui
+Terminal=false
+Categories=Development;RevisionControl;
+StartupWMClass=GitUi.Presentation

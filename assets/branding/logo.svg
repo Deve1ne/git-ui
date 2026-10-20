@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Git UI logo: pruning shears and a pruned git branch">
+  <!-- Pruning shears in thick-outlined line art. The pivot is a commit node; the twig falling
+       away is a pruned git branch (a fork with two commits). Colors follow currentColor and the
+       logo-paper CSS variable, so the mark works on light and dark backgrounds. -->
+  <g transform="translate(-34 4)">
+  <g stroke="currentColor" stroke-width="14" stroke-linejoin="round" stroke-linecap="round" fill="var(--logo-paper, #fff)">
+    <!-- handles -->
+    <path d="M 262 236 C 236 236 214 250 206 270 C 186 316 150 362 108 414 C 90 436 104 466 130 456 C 178 420 224 366 252 316 C 264 294 276 276 292 266 Z" />
+    <path d="M 316 262 C 330 280 332 300 320 322 C 302 360 290 404 280 446 C 274 474 302 484 312 458 C 330 410 352 362 362 318 C 368 290 360 268 344 254 Z" />
+    <!-- spring between the handles -->
+    <path d="M 264 292 L 300 312" stroke-width="22" fill="none" />
+    <!-- upper hooked blade -->
+    <path d="M 272 216 C 262 150 300 80 390 46 C 404 40 412 52 404 64 C 372 110 350 160 334 214 Z" />
+    <!-- lower anvil blade -->
+    <path d="M 318 254 C 360 236 408 206 454 170 C 466 162 478 172 470 184 C 446 232 400 262 340 272 Z" />
+    <!-- pivot: a commit node -->
+    <circle cx="304" cy="232" r="34" />
+    <circle cx="304" cy="232" r="13" fill="currentColor" stroke="none" />
+  </g>
+
+  <!-- pruned git branch: stem, fork, two commits, slightly tilted as it falls -->
+  <g transform="translate(18 -34) rotate(-18 432 360)" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 392 318 L 432 360 L 470 344" />
+    <path d="M 432 360 L 440 410" />
+    <path d="M 384 306 L 396 322" stroke-dasharray="2 14" />
+    <circle cx="470" cy="344" r="13" fill="var(--logo-paper, #fff)" />
+    <circle cx="440" cy="410" r="13" fill="var(--logo-paper, #fff)" />
+  </g>
+  </g>
+</svg>

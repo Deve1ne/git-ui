@@ -1,0 +1,83 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+        x:Class="GitUi.Presentation.Views.AccountsWindow"
+        x:DataType="vm:AccountsViewModel"
+        x:Name="AccountsRoot"
+        Title="Accounts" Width="620" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PanelBackgroundBrush}">
+    <Window.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,10,0,2" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Window.Styles>
+    <!-- Connected accounts, then the form to add one: Git Credential Manager sign-in or a token. -->
+    <StackPanel Margin="18" Spacing="6">
+        <TextBlock Classes="section" Text="CONNECTED ACCOUNTS" Margin="0,0,0,2" />
+        <TextBlock Classes="hint" Text="Used to list and create pull requests and to clone your repositories. Tokens are kept out of the settings file: encrypted for your Windows user, or readable only by you on Linux and macOS." />
+        <TextBlock Text="No account connected yet." IsVisible="{Binding !HasAccounts}" Margin="0,6" FontStyle="Italic"
+                   Foreground="{DynamicResource TextSecondaryBrush}" />
+        <ItemsControl ItemsSource="{Binding Accounts}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AccountRow">
+                    <Border BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="0,6">
+                        <Grid ColumnDefinitions="110,*,Auto">
+                            <TextBlock Text="{Binding ProviderName}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Method}" Classes="hint" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="Remove" FontSize="11" Padding="8,2" MinHeight="0"
+                                    Command="{Binding #AccountsRoot.((vm:AccountsViewModel)DataContext).RemoveCommand}" CommandParameter="{Binding}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Classes="section" Text="ADD AN ACCOUNT" Margin="0,16,0,2" />
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+            <TextBlock Text="Service" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}" Width="220">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProviderOption">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+        <TextBox Text="{Binding Organization}" IsVisible="{Binding NeedsOrganization}"
+                 PlaceholderText="Organization (the name after dev.azure.com/, or paste its URL)" />
+
+        <RadioButton GroupName="auth" Content="Sign in with Git Credential Manager" IsChecked="{Binding UseCredentialManager}" Margin="0,6,0,0" />
+        <TextBlock Classes="hint" Text="{Binding CredentialManagerHelp}" IsVisible="{Binding UseCredentialManager}" Margin="28,0,0,4" />
+        <RadioButton GroupName="auth" Content="Personal access token" IsChecked="{Binding UseToken}" />
+        <StackPanel IsVisible="{Binding UseToken}" Spacing="6" Margin="28,0,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="hint" Text="{Binding TokenHelp}" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Create a token…" Command="{Binding OpenTokenPageCommand}" FontSize="11" Padding="8,2" Margin="8,0,0,0" />
+            </Grid>
+            <TextBox Text="{Binding Username}" IsVisible="{Binding NeedsUsername}" PlaceholderText="Atlassian email (API token) or Bitbucket user name (app password)" />
+            <TextBox Text="{Binding Token}" PasswordChar="•" PlaceholderText="Token" />
+        </StackPanel>
+
+        <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Foreground="#E05561" TextWrapping="Wrap" Margin="0,4,0,0" />
+        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}" Margin="0,4,0,0">
+            <ProgressBar IsIndeterminate="True" Width="80" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding StatusMessage}" Classes="hint" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
+            <Button Content="Connect" Classes="accent" Command="{Binding ConnectCommand}" />
+            <Button Name="CloseButton" Content="Close" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

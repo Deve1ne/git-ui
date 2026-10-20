@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:GitUi.Presentation.Converters"
+             xmlns:vm="clr-namespace:GitUi.Presentation.ViewModels"
+             xmlns:views="clr-namespace:GitUi.Presentation.Views"
+             x:Class="GitUi.Presentation.Views.DiffView"
+             x:DataType="vm:StagingViewModel"
+             x:Name="DiffRoot"
+             Background="{DynamicResource AppBackgroundBrush}">
+    <!-- File diff shown in place of the graph while a working-directory file is selected. -->
+    <UserControl.Styles>
+        <Style Selector="ListBox.diff-lines">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontFamily" Value="Consolas,Menlo,monospace" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="ListBox.diff-lines ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="ListBox.diff-lines ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedRowBrush}" />
+        </Style>
+        <Style Selector="ListBox.diff-lines ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverRowBrush}" />
+        </Style>
+        <Style Selector="TextBlock.line-number">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.diff-action">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,1" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="panel-header" Height="32">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Column="0" Margin="0,0,8,0"
+                           Text="{Binding SelectedChange.IsStaged, Converter={x:Static conv:BoolToDiffSourceConverter.Instance}, FallbackValue=''}" />
+                <TextBlock Grid.Column="1" Text="{Binding SelectedChange.Path, FallbackValue=''}"
+                           TextTrimming="LeadingCharacterEllipsis" Foreground="{DynamicResource TextNormalBrush}" />
+                <Button Grid.Column="2" Classes="diff-action" IsVisible="{Binding CanDiscardPartially}" Margin="0,0,4,0"
+                        Content="Discard selected lines"
+                        ToolTip.Tip="Select lines (Ctrl/Shift+click), then throw away just those changes"
+                        Command="{Binding DiscardSelectedLinesCommand}" />
+                <Button Grid.Column="3" Classes="diff-action" IsVisible="{Binding CanStagePartially}"
+                        Content="{Binding PartialStageVerb, StringFormat='{}{0} selected lines'}"
+                        ToolTip.Tip="Select lines (Ctrl/Shift+click), then stage or unstage just those lines"
+                        Command="{Binding StageSelectedLinesCommand}" />
+                <views:DiffOptionsBar Grid.Column="4" DataContext="{Binding Diff.Settings}" Margin="6,0,0,0" />
+                <Button Grid.Column="5" Content="↗" Command="{Binding OpenExternalDiffCommand}" ToolTip.Tip="Open in the external diff tool (git difftool)"
+                        Background="Transparent" BorderThickness="0" Padding="8,0" Margin="4,0,0,0" VerticalAlignment="Stretch" />
+                <Button Grid.Column="6" Content="✕" Command="{Binding CloseDiffCommand}" ToolTip.Tip="Close diff (back to graph)"
+                        Background="Transparent" BorderThickness="0" Padding="8,0" Margin="4,0,0,0" VerticalAlignment="Stretch" />
+            </Grid>
+        </Border>
+        <Panel>
+        <views:DiffBody DataContext="{Binding Diff}" IsVisible="{Binding Settings.IsSplit}" />
+        <ListBox Classes="diff-lines" Name="DiffLines" ItemsSource="{Binding DiffRows}" SelectionMode="Multiple"
+                 IsVisible="{Binding !Diff.Settings.IsSplit}"
+                 SelectionChanged="OnDiffSelectionChanged"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DiffRow">
+                    <Panel>
+                        <!-- Hunk header -->
+                        <Border IsVisible="{Binding IsHunkHeader}" Background="{DynamicResource PanelHeaderBackgroundBrush}"
+                                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,1" Padding="8,3">
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                <TextBlock Text="{Binding Text}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="diff-action" Content="Discard hunk" Margin="0,0,4,0"
+                                        IsVisible="{Binding #DiffRoot.((vm:StagingViewModel)DataContext).CanDiscardPartially}"
+                                        Command="{Binding #DiffRoot.((vm:StagingViewModel)DataContext).DiscardHunkCommand}"
+                                        CommandParameter="{Binding}" />
+                                <Button Grid.Column="2" Classes="diff-action"
+                                        IsVisible="{Binding #DiffRoot.((vm:StagingViewModel)DataContext).CanStagePartially}"
+                                        Content="{Binding #DiffRoot.((vm:StagingViewModel)DataContext).PartialStageVerb, StringFormat='{}{0} hunk'}"
+                                        Command="{Binding #DiffRoot.((vm:StagingViewModel)DataContext).StageHunkCommand}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </Border>
+                        <!-- Diff line: old number, new number, +/- marker, text -->
+                        <Grid IsVisible="{Binding !IsHunkHeader}" ColumnDefinitions="48,48,18,*"
+                              Background="{Binding Kind, Converter={x:Static conv:DiffLineKindToBrushConverter.Instance}}">
+                            <TextBlock Grid.Column="0" Classes="line-number" Text="{Binding OldLineNumber}" />
+                            <TextBlock Grid.Column="1" Classes="line-number" Text="{Binding NewLineNumber}" />
+                            <TextBlock Grid.Column="2" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="{Binding Kind, Converter={x:Static conv:DiffLineKindToPrefixConverter.Instance}}" />
+                            <TextBlock Grid.Column="3" Foreground="{DynamicResource TextNormalBrush}" Margin="0,0,12,0"><Run Text="{Binding Prefix}" /><Run Text="{Binding Changed}" Background="{Binding Kind, Converter={x:Static conv:DiffLineKindToHighlightBrushConverter.Instance}}" /><Run Text="{Binding Suffix}" /></TextBlock>
+                        </Grid>
+                    </Panel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        </Panel>
+    </DockPanel>
+</UserControl>
