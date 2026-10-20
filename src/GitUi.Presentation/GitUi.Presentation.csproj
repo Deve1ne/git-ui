@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,7 +8,7 @@
     <!-- Explorer / taskbar icon of the executable; windows use the same file through Window.Icon. -->
     <ApplicationIcon>Assets\gitui.ico</ApplicationIcon>
     <!-- Read by packaging/package.py for the installers' version. -->
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
