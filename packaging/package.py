@@ -107,10 +107,11 @@ def license_rtf():
     """LICENSE as the RTF the installer's license page shows."""
     with open(os.path.join(ROOT, 'LICENSE'), encoding='utf-8') as f:
         text = f.read().replace('\\', '\\\\').replace('{', '\\{').replace('}', '\\}')
+    text = ''.join(c if ord(c) < 128 else '\\u%d?' % ord(c) for c in text)
     paragraphs = [' '.join(p.split()) for p in re.split(r'\n\s*\n', text.strip())]
     body = '\\par\\par\n'.join(paragraphs)
     path = os.path.join(DIST, 'License.rtf')
-    with open(path, 'w', encoding='ascii', errors='replace', newline='\n') as f:
+    with open(path, 'w', encoding='ascii', newline='\n') as f:
         f.write('{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Segoe UI;}}\\f0\\fs18\n' + body + '\\par\n}\n')
     return path
 

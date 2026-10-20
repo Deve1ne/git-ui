@@ -1,0 +1,46 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GitUi.Presentation.Views.AboutWindow"
+        Title="About Git UI" Icon="/Assets/gitui.ico"
+        Width="440" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PanelBackgroundBrush}">
+    <Window.Styles>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="Foreground" Value="#15A0BF" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Styles>
+    <StackPanel Margin="24,22,24,18" Spacing="6">
+        <Image Source="/Assets/gitui-256.png" Width="88" Height="88" HorizontalAlignment="Center" />
+        <TextBlock Text="Git UI" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,6,0,0" />
+        <TextBlock Name="VersionText" Classes="hint" FontSize="13" />
+        <TextBlock Classes="hint" Margin="0,6,0,0"
+                   Text="A fast, keyboard-friendly desktop Git client for Windows, Linux and macOS." />
+        <TextBlock Name="CopyrightText" Classes="hint" Margin="0,6,0,0" />
+        <TextBlock Classes="hint">
+            <Run Text="Free software under the " /><Run Name="LicenseRun" FontWeight="SemiBold" /><Run Text=": you may run, study, share and modify it." />
+        </TextBlock>
+        <TextBlock Classes="hint" FontSize="11"
+                   Text="This program comes with ABSOLUTELY NO WARRANTY. Modified versions must stay under the same license." />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4" Margin="0,4,0,0">
+            <Button Name="RepositoryButton" Classes="link" Content="GitHub" />
+            <Button Name="ReleasesButton" Classes="link" Content="Releases" />
+            <Button Name="LicenseButton" Classes="link" Content="License" />
+        </StackPanel>
+        <TextBlock Name="RuntimeText" Classes="hint" FontSize="11" Margin="0,4,0,0" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Name="CopyButton" Content="Copy version info" />
+            <Button Name="CloseButton" Content="Close" IsCancel="True" IsDefault="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

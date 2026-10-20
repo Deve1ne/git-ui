@@ -73,12 +73,8 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // The version in the title bar shows which build is running, e.g. after an upgrade.
-        var version = typeof(MainWindow).Assembly
-            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
-            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
-            .FirstOrDefault()?.InformationalVersion.Split('+')[0];
-        if (!string.IsNullOrEmpty(version))
-            Title = "Git UI " + version;
+        if (AppInfo.Version is { } version)
+            Title = $"{AppInfo.Name} {version}";
 
         // Zoom (Ctrl+= / Ctrl+- / Ctrl+0) scales the whole window content, like GitKraken's zoom.
         var content = (Control)Content!;
@@ -785,6 +781,8 @@ public partial class MainWindow : Window
             }
         });
 
+        var openAbout = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(() => new AboutWindow().ShowDialog(this));
+
         // Command palette (Ctrl+P / Ctrl+Shift+P): every action, plus branches and recent repositories.
         var palette = Resolve<CommandPaletteViewModel>();
         this.FindControl<CommandPaletteView>("CommandPaletteControl")!.DataContext = palette;
@@ -854,6 +852,7 @@ public partial class MainWindow : Window
                 new("Tabs", "Close tab", "Ctrl+W", Do(viewModel.CloseCurrentTabCommand)),
                 new("Tabs", "Reopen closed tab", "Ctrl+Shift+T", Do(viewModel.ReopenClosedTabCommand)),
                 new("App", "Preferences…", "Ctrl+,", Do(openPreferences)),
+                new("App", "About Git UI", null, Do(openAbout)),
                 new("App", "Accounts (GitHub, GitLab, Azure DevOps, Bitbucket)…", null, () => _ = AccountsWindow.ShowAsync(this)),
                 new("App", viewModel.IsDarkTheme ? "Switch to the light theme" : "Switch to the dark theme", null, Do(viewModel.ToggleThemeCommand)),
                 new("App", "Toggle the terminal panel", null, () => _commandViewModel?.TogglePanel()),
@@ -913,6 +912,7 @@ public partial class MainWindow : Window
             appMenu.Items.Add(new Separator());
             appMenu.Items.Add(Item(viewModel.IsDarkTheme ? "Light theme" : "Dark theme", viewModel.ToggleThemeCommand));
             appMenu.Items.Add(Item("Preferences…", openPreferences, null, "Ctrl+OemComma"));
+            appMenu.Items.Add(Item("About Git UI", openAbout));
             appMenu.Items.Add(new MenuItem { Header = "Exit", Command = new CommunityToolkit.Mvvm.Input.RelayCommand(Close), InputGesture = KeyGesture.Parse("Alt+F4") });
         }
 

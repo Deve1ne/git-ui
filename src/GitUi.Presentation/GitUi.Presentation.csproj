@@ -8,7 +8,7 @@
     <!-- Explorer / taskbar icon of the executable; windows use the same file through Window.Icon. -->
     <ApplicationIcon>Assets\gitui.ico</ApplicationIcon>
     <!-- Read by packaging/package.py for the installers' version. -->
-    <Version>0.2.1</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
